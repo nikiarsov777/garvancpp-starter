@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
+{{>header.html}}
+
+<body class="font-sans antialiased dark:bg-black dark:text-white/50">
+   
+    <nav class="navbar navbar-expand-lg navbar-dark bg-garvan-stat">
+        <div class="container px-5 bg-garvan">
+            <a class="navbar-brand"
+                href="/">
+                <img class="logo"
+                    src="/static/img/logo.png" />
+                <span class="head">
+                    {{name}}
+                </span>
+            </a>
+            <button class="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent"
+                aria-expanded="false"
+                aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse"
+                id="navbarSupportedContent">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link active"
+                            aria-current="page"
+                            href="/">Начало</a></li>
+                    <li class="nav-item"><a class="nav-link"
+                            href="/about">За Нас</a></li>
+                    <li class="nav-item"><a class="nav-link"
+                            href="/contact">Контакти</a></li>
+                    {{-- <li class="nav-item"><a class="nav-link"
+                            href="/blogs">Блог</a></li> --}}
+                    <li class="nav-item"><a class="nav-link"
+                            href="/news">Новини</a></li>
+                    <li class="nav-item">
+                        
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
+
+        <div class="relative w-full max-w-2xl px-6 lg:max-w-7xl">
+            <div class="main-logo">
+                <!-- <img src="/static/img/crow-logo.png" class="main-logo" /> -->
+                <img src="/static/img/garvan.png" class="main-logo" />
+            </div>
+
+            <footer class="py-16 text-center text-sm text-black dark:text-white/70">
+                {{> footer.html }}
+            </footer>
+        </div>
+    </div>
+</body>
+
+</html>

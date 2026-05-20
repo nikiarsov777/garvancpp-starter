@@ -1,0 +1,21 @@
+<h1>Blueprints</h1>
+<p>Blueprint е група маршрути, които споделят URL префикс, базова директория за шаблони или статична директория. Удобни са, когато искате да разделите голямо приложение на модули &mdash; например един blueprint за всяка API версия.</p>
+
+<h2 id="creating">Създаване на blueprint</h2>
+<pre><code class="language-cpp">crow::Blueprint api("api/v1", "static_v1", "templates_v1");
+
+CROW_BP_ROUTE(api, "/users")([] {
+    return "v1 потребители";
+});
+</code></pre>
+
+<h2 id="mounting">Прикрепяне към приложението</h2>
+<pre><code class="language-cpp">app.register_blueprint(api);
+</code></pre>
+
+<p>Префиксът на blueprint-а се добавя пред всеки маршрут в него, така че handler-ът горе отговаря на <code>GET /api/v1/users</code>.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/static"><span class="label">{{t_prev}}</span><span class="title">Статични файлове</span></a>
+    <a class="next" href="/guides/compression"><span class="label">{{t_next}}</span><span class="title">Компресия</span></a>
+</div>

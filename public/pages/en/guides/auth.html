@@ -1,0 +1,34 @@
+<h1>HTTP authorization</h1>
+<p>HTTP authentication is performed through the <code>Authorization</code> header. Garvan does not impose a scheme; you read the header in a middleware or in the handler itself.</p>
+
+<h2 id="basic">Basic auth</h2>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/admin")([](const crow::request &amp;req) {
+    auto h = req.get_header_value("Authorization");
+    if (h.rfind("Basic ", 0) != 0) return crow::response(401);
+
+    std::string token = h.substr(6);
+    std::string raw   = crow::utility::base64decode(token, token.size());
+    // raw == "user:password"
+    if (raw != "admin:secret") return crow::response(403);
+
+    return crow::response("welcome");
+});
+</code></pre>
+
+<h2 id="bearer">Bearer tokens</h2>
+<p>JWTs and opaque tokens look the same on the wire:</p>
+
+<pre><code class="language-cpp">if (h.rfind("Bearer ", 0) != 0) return crow::response(401);
+std::string jwt = h.substr(7);
+// verify the signature, check claims, etc.
+</code></pre>
+
+<div class="admonition tip">
+    <div class="admonition-title">Tip</div>
+    <p>Pull the check into a middleware so it doesn't repeat in every handler. See the <a href="/guides/middleware">middleware guide</a>.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/testing"><span class="label">{{t_prev}}</span><span class="title">Writing tests</span></a>
+    <a class="next" href="/guides/included_middleware"><span class="label">{{t_next}}</span><span class="title">Included middlewares</span></a>
+</div>

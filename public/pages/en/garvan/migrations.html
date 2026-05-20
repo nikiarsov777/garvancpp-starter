@@ -1,0 +1,41 @@
+<h1>Migrations</h1>
+<p>Garvan ships a standalone migration tool called <code>garvan-migrate</code>. It reads SQL or JSON files from <code>db/migrations/</code>, applies them in version order, and records what's already been run in a tracking table.</p>
+
+<h2 id="running">Running migrations</h2>
+<pre><code class="language-bash">./vendors/Garvan/garvan-migrate up        # apply pending migrations
+./vendors/Garvan/garvan-migrate down      # revert the last applied migration
+./vendors/Garvan/garvan-migrate status    # show what's pending / applied
+</code></pre>
+
+<p>The tool reads its connection settings from the same <code>.env</code> file your app uses.</p>
+
+<h2 id="writing">Writing a migration</h2>
+<p>Filenames follow <code>&lt;UTC YYYYMMDDhhmmss&gt;_&lt;description&gt;.sql</code>. Each file has two sections, marked dbmate-style:</p>
+
+<pre><code class="language-bash">-- migrate:up
+CREATE TABLE posts (
+    id          serial PRIMARY KEY,
+    title       text NOT NULL,
+    body        text,
+    user_id     integer REFERENCES users(id),
+    created_at  timestamp DEFAULT now()
+);
+
+-- migrate:down
+DROP TABLE posts;
+</code></pre>
+
+<p>For per-backend variants append <code>.&lt;dbtype&gt;</code> before <code>.sql</code> &mdash; for example <code>20240501_create_posts.mysql.sql</code>.</p>
+
+<h2 id="rollback">Rollback</h2>
+<p>Every <code>up</code> must have a matching <code>down</code> &mdash; the tool refuses to apply a migration without one. <code>garvan-migrate down</code> runs them in reverse order, one at a time.</p>
+
+<div class="admonition note">
+    <div class="admonition-title">MongoDB</div>
+    <p>For MongoDB migrations the file body is one or more top-level JSON documents. Each one is sent to <code>db.runCommand()</code> in order.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/services"><span class="label">{{t_prev}}</span><span class="title">Services</span></a>
+    <a class="next" href="/garvan/kalpasan"><span class="label">{{t_next}}</span><span class="title">Kalpasan CLI</span></a>
+</div>

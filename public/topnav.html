@@ -1,0 +1,26 @@
+<nav class="docs-topnav">
+    <button class="docs-sidebar-toggle" aria-label="Toggle sidebar">&#9776;</button>
+    <a class="brand" href="/">
+        <img src="/static/img/logo.png" alt="Garvan" />
+        <span>Garvan C++</span>
+    </a>
+    <ul class="nav-links">
+        <li><a href="/" class="{{#active_home}}active{{/active_home}}">{{t_nav_home}}</a></li>
+        <li><a href="/getting_started/setup_linux" class="{{#active_getting_started}}active{{/active_getting_started}}">{{t_nav_getting_started}}</a></li>
+        <li><a href="/guides/app" class="{{#active_guides}}active{{/active_guides}}">{{t_nav_guides}}</a></li>
+        <li><a href="/garvan/orm" class="{{#active_garvan}}active{{/active_garvan}}">{{t_nav_garvan}}</a></li>
+        <li><a href="/reference" class="{{#active_reference}}active{{/active_reference}}">{{t_nav_reference}}</a></li>
+    </ul>
+    <div class="topnav-right">
+        <a class="github-link" href="https://github.com/nikiarsov777/garvancpp-starter.git" target="_blank" rel="noopener">GitHub</a>
+        <button class="lang-toggle" aria-haspopup="true">{{lang_label}} &#9662;</button>
+        <ul class="lang-menu" id="langMenu">
+            <li><a href="/lang/bg" class="{{#is_bg}}active{{/is_bg}}">Български</a></li>
+            <li><a href="/lang/en" class="{{#is_en}}active{{/is_en}}">English</a></li>
+            <li><a href="/lang/ru" class="{{#is_ru}}active{{/is_ru}}">Русский</a></li>
+            <li><a href="/lang/es" class="{{#is_es}}active{{/is_es}}">Español</a></li>
+            <li><a href="/lang/tr" class="{{#is_tr}}active{{/is_tr}}">Türkçe</a></li>
+            <li><a href="/lang/pt" class="{{#is_pt}}active{{/is_pt}}">Português</a></li>
+        </ul>
+    </div>
+</nav>

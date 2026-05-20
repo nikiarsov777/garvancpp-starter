@@ -1,0 +1,29 @@
+<h1>Kalpasan CLI</h1>
+<p><code>kalpasan</code> е спътникът от командния ред на проекта. Скаффолдва модели, контролери и услуги, изпълнява миграции и seeder-и, и стартира development сървър с file watching.</p>
+
+<h2 id="install">Инсталация</h2>
+<p>Изпълнимият файл се намира в <code>vendors/Garvan/kalpasan</code>. Symlink в корена на проекта прави извикването му удобно:</p>
+
+<pre><code class="language-bash">ln -s vendors/Garvan/kalpasan kalpasan
+./kalpasan --help
+</code></pre>
+
+<h2 id="commands">Налични команди</h2>
+<pre><code class="language-bash">./kalpasan make:model User           # скаффолдва app/models/User.{h,cpp}
+./kalpasan make:controller User      # скаффолдва app/controllers/UserController.{h,cpp}
+./kalpasan make:service User         # скаффолдва app/services/UserService.{h,cpp}
+./kalpasan make:migration create_users
+
+./kalpasan db:migrate                # делегира към garvan-migrate up
+./kalpasan db:rollback               # делегира към garvan-migrate down
+./kalpasan db:seed                   # изпълнява файловете в db/seeders/
+
+./kalpasan serve --watch             # rebuild + рестарт при промяна на .cpp/.h
+</code></pre>
+
+<p>Всички команди уважават активния <code>.env</code> файл, така че работят срещу правилната база.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/migrations"><span class="label">{{t_prev}}</span><span class="title">Миграции</span></a>
+    <a class="next" href="/garvan/databases"><span class="label">{{t_next}}</span><span class="title">Драйвери за бази данни</span></a>
+</div>

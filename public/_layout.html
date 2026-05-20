@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="{{lang}}">
+
+{{>header.html}}
+
+<body class="docs-body">
+    {{>topnav.html}}
+
+    <div class="docs-shell">
+        <aside class="docs-sidebar" id="docsSidebar">
+            {{>sidebar.html}}
+        </aside>
+
+        <main class="docs-main">
+            <article>
+                {{&content}}
+            </article>
+        </main>
+
+        <aside class="docs-toc">
+            {{>toc.html}}
+        </aside>
+    </div>
+
+    {{>footer.html}}
+
+    <script>
+        // Sidebar toggle (mobile)
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.docs-sidebar-toggle')) {
+                document.getElementById('docsSidebar').classList.toggle('open');
+            }
+            if (e.target.closest('.lang-toggle')) {
+                e.preventDefault();
+                document.getElementById('langMenu').classList.toggle('open');
+            } else if (!e.target.closest('#langMenu')) {
+                var m = document.getElementById('langMenu');
+                if (m) m.classList.remove('open');
+            }
+        });
+
+        // Highlight.js init
+        if (window.hljs) { hljs.highlightAll(); }
+
+        // Scroll-spy for TOC
+        (function() {
+            var headings = document.querySelectorAll('.docs-main h2[id], .docs-main h3[id]');
+            var tocLinks = document.querySelectorAll('.docs-toc a');
+            if (!headings.length || !tocLinks.length) return;
+
+            function onScroll() {
+                var pos = window.scrollY + 100;
+                var current = null;
+                headings.forEach(function(h) {
+                    if (h.offsetTop <= pos) current = h.id;
+                });
+                tocLinks.forEach(function(a) {
+                    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+                });
+            }
+            window.addEventListener('scroll', onScroll);
+            onScroll();
+        })();
+    </script>
+</body>
+
+</html>

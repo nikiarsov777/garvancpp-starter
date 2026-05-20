@@ -1,0 +1,22 @@
+<h1>Compression</h1>
+<p>Garvan can gzip or deflate response bodies on the fly. Enable it at build time and pick a default per app.</p>
+
+<h2 id="enabling">Enabling compression</h2>
+<p>Compile with <code>-DCROW_ENABLE_COMPRESSION</code> and link against zlib:</p>
+
+<pre><code class="language-cmake">find_package(ZLIB REQUIRED)
+target_compile_definitions(app_bin PRIVATE CROW_ENABLE_COMPRESSION)
+target_link_libraries(app_bin PRIVATE ZLIB::ZLIB)
+</code></pre>
+
+<p>Then turn it on per app:</p>
+
+<pre><code class="language-cpp">app.use_compression(crow::compression::GZIP);
+</code></pre>
+
+<p>Clients that send <code>Accept-Encoding: gzip</code> will receive a compressed body; everyone else gets the response untouched.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/blueprints"><span class="label">{{t_prev}}</span><span class="title">Blueprints</span></a>
+    <a class="next" href="/guides/websockets"><span class="label">{{t_next}}</span><span class="title">WebSockets</span></a>
+</div>

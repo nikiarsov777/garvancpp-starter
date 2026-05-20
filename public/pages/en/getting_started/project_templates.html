@@ -1,0 +1,85 @@
+<h1>Project templates</h1>
+<p>Rather than building everything from scratch, you can start from a Garvan project skeleton. The recommended layout matches what the bundled <code>kalpasan</code> CLI and <code>garvan-migrate</code> tools expect to find.</p>
+
+<h2 id="directory-layout">Directory layout</h2>
+<pre><code class="language-bash">my-app/
+├── app/
+│   ├── controllers/        # request handlers, one class per resource
+│   ├── models/             # database models extending OModel
+│   └── services/           # business logic between controllers and models
+├── db/
+│   ├── migrations/         # SQL files run by garvan-migrate
+│   └── seeders/            # initial data
+├── public/                 # mustache templates (HTML)
+├── static/                 # served at /static/* (css, js, images)
+├── routes/
+│   ├── ApiRoutes.cpp       # JSON / REST endpoints
+│   └── WebRoutes.cpp       # HTML pages
+├── vendors/Garvan/         # bundled libgarvan.a + headers
+├── .env                    # environment configuration
+├── CMakeLists.txt
+└── main.cpp                # entry point: wires the routes
+</code></pre>
+
+<h2 id="cmake-template">CMake template</h2>
+<p>A minimal <code>CMakeLists.txt</code> that follows the layout above:</p>
+
+<pre><code class="language-cmake">cmake_minimum_required(VERSION 3.20)
+project(MyApp CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
+
+file(GLOB_RECURSE SOURCES
+    "main.cpp"
+    "routes/*.cpp"
+    "app/controllers/*.cpp"
+    "app/models/*.cpp"
+    "app/services/*.cpp"
+)
+
+add_executable(app_bin ${SOURCES})
+
+target_include_directories(app_bin PRIVATE
+    .
+    vendors/Garvan
+    vendors/Garvan/include
+)
+
+target_link_libraries(app_bin PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendors/Garvan/libgarvan.a
+    pthread
+)
+
+set_target_properties(app_bin PROPERTIES OUTPUT_NAME app.bin)
+</code></pre>
+
+<p>From there, your <code>main.cpp</code> only needs to wire the routes together:</p>
+
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+#include "routes/ApiRoutes.h"
+#include "routes/WebRoutes.h"
+
+using namespace Routes;
+
+int main()
+{
+    crow::SimpleApp app;
+    crow::mustache::set_global_base("public/");
+
+    WebRoutes  webRoutes(app);
+    ApiRoutes  apiRoutes(app);
+
+    app.port(9090).multithreaded().run();
+}
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/getting_started/setup_windows">
+        <span class="label">{{t_prev}}</span><span class="title">Setup on Windows</span>
+    </a>
+    <a class="next" href="/getting_started/your_first_application">
+        <span class="label">{{t_next}}</span><span class="title">Your first application</span>
+    </a>
+</div>

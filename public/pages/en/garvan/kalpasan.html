@@ -1,0 +1,29 @@
+<h1>Kalpasan CLI</h1>
+<p><code>kalpasan</code> is the project's command-line companion. It scaffolds models, controllers and services, runs migrations and seeders, and starts a development server with file watching.</p>
+
+<h2 id="install">Installing</h2>
+<p>The binary lives at <code>vendors/Garvan/kalpasan</code>. A symlink at the project root makes it convenient to call:</p>
+
+<pre><code class="language-bash">ln -s vendors/Garvan/kalpasan kalpasan
+./kalpasan --help
+</code></pre>
+
+<h2 id="commands">Available commands</h2>
+<pre><code class="language-bash">./kalpasan make:model User           # scaffold app/models/User.{h,cpp}
+./kalpasan make:controller User      # scaffold app/controllers/UserController.{h,cpp}
+./kalpasan make:service User         # scaffold app/services/UserService.{h,cpp}
+./kalpasan make:migration create_users
+
+./kalpasan db:migrate                # delegates to garvan-migrate up
+./kalpasan db:rollback               # delegates to garvan-migrate down
+./kalpasan db:seed                   # run files in db/seeders/
+
+./kalpasan serve --watch             # rebuild + restart on .cpp/.h change
+</code></pre>
+
+<p>All commands respect the active <code>.env</code> file so they target the right database.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/migrations"><span class="label">{{t_prev}}</span><span class="title">Migrations</span></a>
+    <a class="next" href="/garvan/databases"><span class="label">{{t_next}}</span><span class="title">Database drivers</span></a>
+</div>

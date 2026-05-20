@@ -1,0 +1,65 @@
+<h1>Вашето първо приложение</h1>
+<p>Най-малката възможна Garvan програма се състои от няколко реда C++. Нека минем през всяка част.</p>
+
+<h2 id="include">1. Включване</h2>
+<p>Започнете с празен <code>main.cpp</code> и включете header-а на Crow, доставен с Garvan:</p>
+
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+</code></pre>
+
+<p>Този единствен header предоставя <code>crow::SimpleApp</code>, макросите за маршрутизация, JSON типовете и mustache шаблонния двигател.</p>
+
+<h2 id="app-declaration">2. Декларация на приложението</h2>
+<p>Декларирайте Crow приложение в <code>main()</code>:</p>
+
+<pre><code class="language-cpp">int main()
+{
+    crow::SimpleApp app;
+}
+</code></pre>
+
+<p><code>SimpleApp</code> съдържа HTTP сървъра, рутера и логера. Използвайте <code>crow::App&lt;M1, M2, ...&gt;</code>, ако имате нужда от middleware-и, прикрепени на ниво приложение &mdash; вижте <a href="/guides/middleware">ръководството за middleware</a>.</p>
+
+<h2 id="adding-routes">3. Добавяне на маршрути</h2>
+<p>Маршрутът свързва URL шаблон с обработчик. Макросът <code>CROW_ROUTE</code> е най-често използваният начин:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/")([] {
+    return "Здравей от Garvan!";
+});
+</code></pre>
+
+<p>Lambda-та се извиква, когато клиент поиска <code>GET /</code>. Връщането на <code>std::string</code> го изпраща обратно като тяло на отговора.</p>
+
+<h2 id="running">4. Стартиране на приложението</h2>
+<p>Изберете порт и стартирайте сървъра:</p>
+
+<pre><code class="language-cpp">app.port(9090).multithreaded().run();
+</code></pre>
+
+<p><code>multithreaded()</code> казва на Crow да използва един worker на CPU ядро. <code>run()</code> блокира, докато процесът не приключи; използвайте <code>run_async()</code>, ако трябва да правите друга работа едновременно със сървъра.</p>
+
+<h2 id="full-example">Пълен пример</h2>
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+
+int main()
+{
+    crow::SimpleApp app;
+
+    CROW_ROUTE(app, "/")([] {
+        return "Здравей от Garvan!";
+    });
+
+    app.port(9090).multithreaded().run();
+}
+</code></pre>
+
+<p>Компилирайте и посетете <a href="http://localhost:9090">http://localhost:9090</a> &mdash; трябва да видите поздрава в браузъра си.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/getting_started/project_templates">
+        <span class="label">{{t_prev}}</span><span class="title">Шаблони за проекти</span>
+    </a>
+    <a class="next" href="/getting_started/a_simple_webpage">
+        <span class="label">{{t_next}}</span><span class="title">Проста уеб страница</span>
+    </a>
+</div>

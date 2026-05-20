@@ -1,0 +1,41 @@
+<h1>Миграции</h1>
+<p>Garvan доставя самостоятелен инструмент за миграции, наречен <code>garvan-migrate</code>. Той чете SQL или JSON файлове от <code>db/migrations/</code>, прилага ги в подреден по версия ред и записва какво вече е изпълнено в служебна таблица.</p>
+
+<h2 id="running">Изпълняване на миграции</h2>
+<pre><code class="language-bash">./vendors/Garvan/garvan-migrate up        # прилагане на чакащи миграции
+./vendors/Garvan/garvan-migrate down      # връщане на последната приложена миграция
+./vendors/Garvan/garvan-migrate status    # показва какво чака / е приложено
+</code></pre>
+
+<p>Инструментът чете connection настройките си от същия <code>.env</code> файл, който приложението ви използва.</p>
+
+<h2 id="writing">Писане на миграция</h2>
+<p>Имената на файловете следват <code>&lt;UTC YYYYMMDDhhmmss&gt;_&lt;описание&gt;.sql</code>. Всеки файл има две секции, маркирани в dbmate стил:</p>
+
+<pre><code class="language-bash">-- migrate:up
+CREATE TABLE posts (
+    id          serial PRIMARY KEY,
+    title       text NOT NULL,
+    body        text,
+    user_id     integer REFERENCES users(id),
+    created_at  timestamp DEFAULT now()
+);
+
+-- migrate:down
+DROP TABLE posts;
+</code></pre>
+
+<p>За варианти за конкретна база добавете <code>.&lt;dbtype&gt;</code> преди <code>.sql</code> &mdash; например <code>20240501_create_posts.mysql.sql</code>.</p>
+
+<h2 id="rollback">Връщане назад</h2>
+<p>Всяко <code>up</code> трябва да има съответстващо <code>down</code> &mdash; инструментът отказва да приложи миграция без него. <code>garvan-migrate down</code> ги изпълнява в обратен ред, една по една.</p>
+
+<div class="admonition note">
+    <div class="admonition-title">MongoDB</div>
+    <p>За MongoDB миграции тялото на файла е един или повече top-level JSON документа. Всеки от тях се изпраща към <code>db.runCommand()</code> поред.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/services"><span class="label">{{t_prev}}</span><span class="title">Услуги</span></a>
+    <a class="next" href="/garvan/kalpasan"><span class="label">{{t_next}}</span><span class="title">Kalpasan CLI</span></a>
+</div>

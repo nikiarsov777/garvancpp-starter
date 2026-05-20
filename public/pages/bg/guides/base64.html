@@ -1,0 +1,20 @@
+<h1>Base64</h1>
+<p>Помощници за Base64 идват в <code>crow::utility</code>. Използвайте ги за HTTP basic auth header-и, вградени изображения, подписани cookie-та и подобни задачи.</p>
+
+<h2 id="encode">Кодиране</h2>
+<pre><code class="language-cpp">#include "crow/utility.h"
+
+std::string encoded = crow::utility::base64encode("Ada Lovelace", 12);
+// encoded == "QWRhIExvdmVsYWNl"
+</code></pre>
+
+<h2 id="decode">Декодиране</h2>
+<pre><code class="language-cpp">std::string decoded = crow::utility::base64decode(encoded, encoded.size());
+</code></pre>
+
+<p>И двете функции са чисти и заделят памет; добре е да се извикват в handler-и, но използвайте arena allocator, ако обработвате мегабайти на заявка.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/websockets"><span class="label">{{t_prev}}</span><span class="title">WebSockets</span></a>
+    <a class="next" href="/guides/testing"><span class="label">{{t_next}}</span><span class="title">Тестване</span></a>
+</div>

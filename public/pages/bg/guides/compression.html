@@ -1,0 +1,22 @@
+<h1>Компресия</h1>
+<p>Garvan може да компресира тялото на отговор с gzip или deflate в движение. Активирайте я по време на компилация и изберете стойност по подразбиране за всяко приложение.</p>
+
+<h2 id="enabling">Активиране на компресия</h2>
+<p>Компилирайте с <code>-DCROW_ENABLE_COMPRESSION</code> и линкнете zlib:</p>
+
+<pre><code class="language-cmake">find_package(ZLIB REQUIRED)
+target_compile_definitions(app_bin PRIVATE CROW_ENABLE_COMPRESSION)
+target_link_libraries(app_bin PRIVATE ZLIB::ZLIB)
+</code></pre>
+
+<p>След това включете я на ниво приложение:</p>
+
+<pre><code class="language-cpp">app.use_compression(crow::compression::GZIP);
+</code></pre>
+
+<p>Клиенти, които изпращат <code>Accept-Encoding: gzip</code>, ще получат компресирано тяло; всички останали получават отговора без промяна.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/blueprints"><span class="label">{{t_prev}}</span><span class="title">Blueprints</span></a>
+    <a class="next" href="/guides/websockets"><span class="label">{{t_next}}</span><span class="title">WebSockets</span></a>
+</div>

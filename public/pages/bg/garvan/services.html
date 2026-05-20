@@ -1,0 +1,41 @@
+<h1>Услуги</h1>
+<p>Услугите стоят между контролерите и моделите. Съдържат бизнес логиката, която не принадлежи нито в едните, нито в другите &mdash; валидация, операции с няколко таблици, обаждания към външни API.</p>
+
+<h2 id="base-service">BaseService</h2>
+<p>Базовият клас отразява <code>BaseContoller</code>, но всички методи са виртуални:</p>
+
+<pre><code class="language-cpp">class BaseService : public Helper
+{
+public:
+    virtual json index();
+    virtual json create(json model);
+    json         create(const crow::request &amp;req); // удобство: парсва тялото вместо вас
+    virtual json read(string id);
+    virtual json update(json model);
+    virtual void erease();
+    virtual json getById(string id);
+};
+</code></pre>
+
+<h2 id="injection">Употреба в контролер</h2>
+<p>Инстанцирайте услугата в метода на контролера, или я инжектирайте през конструктора:</p>
+
+<pre><code class="language-cpp">json PostController::index()
+{
+    PostService svc;
+    auto posts = svc.index();
+
+    // post-processing: скриване на лични полета, добавяне на pagination и т.н.
+    json out;
+    out["data"]  = posts;
+    out["count"] = posts.size();
+    return out;
+}
+</code></pre>
+
+<p>Слоят с услуги също улеснява тестването &mdash; контролерите стават тънки shim-ове, а услугите могат да се упражняват без да стартирате HTTP сървъра.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/controllers"><span class="label">{{t_prev}}</span><span class="title">Контролери</span></a>
+    <a class="next" href="/garvan/migrations"><span class="label">{{t_next}}</span><span class="title">Миграции</span></a>
+</div>

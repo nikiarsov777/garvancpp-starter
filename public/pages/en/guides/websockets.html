@@ -1,0 +1,28 @@
+<h1>WebSockets</h1>
+<p>WebSockets give you bidirectional, low-latency channels on the same port as your HTTP routes. Garvan exposes Crow's WebSocket API unchanged.</p>
+
+<h2 id="defining">Defining a websocket route</h2>
+<pre><code class="language-cpp">CROW_WEBSOCKET_ROUTE(app, "/ws")
+    .onopen([&amp;](crow::websocket::connection &amp;conn) {
+        CROW_LOG_INFO &lt;&lt; "client connected: " &lt;&lt; &amp;conn;
+    })
+    .onmessage([&amp;](crow::websocket::connection &amp;conn,
+                    const std::string &amp;data, bool is_binary) {
+        conn.send_text("you said: " + data);
+    })
+    .onclose([&amp;](crow::websocket::connection &amp;conn, const std::string &amp;reason, uint16_t code) {
+        CROW_LOG_INFO &lt;&lt; "client gone: " &lt;&lt; reason;
+    });
+</code></pre>
+
+<h2 id="events">Connection events</h2>
+<p>You'll typically want three handlers: <code>onopen</code> to track new connections, <code>onmessage</code> for incoming frames, and <code>onclose</code> to clean up state. Store connections in a thread-safe container if you need to broadcast.</p>
+
+<pre><code class="language-cpp">std::mutex                                  mu;
+std::unordered_set&lt;crow::websocket::connection*&gt; clients;
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/compression"><span class="label">{{t_prev}}</span><span class="title">Compression</span></a>
+    <a class="next" href="/guides/base64"><span class="label">{{t_next}}</span><span class="title">Base64</span></a>
+</div>

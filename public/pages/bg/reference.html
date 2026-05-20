@@ -1,0 +1,26 @@
+<h1>API справка</h1>
+<p>Тази страница води към генерираната API справка за Garvan и Crow. Справката се произвежда от Doxygen от коментарите в header-ите на изходния код.</p>
+
+<h2 id="about">Относно</h2>
+<p>Справката покрива два слоя:</p>
+<ul>
+    <li><strong>Garvan</strong> &mdash; базовите класове за модел/контролер/услуга, ORM builder-а, migration runner-а и помощниците в <code>vendors/Garvan/include/</code>.</li>
+    <li><strong>Crow</strong> &mdash; подлежащият HTTP сървър, рутер, JSON, mustache, multipart и websocket подсистеми.</li>
+</ul>
+
+<h2 id="namespaces">Пространства от имена</h2>
+<ul>
+    <li><code>Garvan</code> &mdash; framework класове (<code>BaseContoller</code>, <code>BaseService</code>, <code>Builder</code>, <code>Migration</code>, <code>MigrationRunner</code>).</li>
+    <li><code>ORM</code> &mdash; <code>OModel</code> базата и свързани типове.</li>
+    <li><code>crow</code> &mdash; всичко от upstream Crow: <code>SimpleApp</code>, <code>App&lt;...&gt;</code>, <code>request</code>, <code>response</code>, <code>json::rvalue</code>, <code>json::wvalue</code>, <code>mustache::template_t</code>.</li>
+</ul>
+
+<div class="admonition note">
+    <div class="admonition-title">Статус</div>
+    <p>Doxygen изходът все още не е свързан с този сайт. Дотогава, разглеждайте директно header-ите в <code>vendors/Garvan/include/</code> и <code>vendors/Garvan/crow/</code>.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/helpers"><span class="label">{{t_prev}}</span><span class="title">Помощни инструменти</span></a>
+    <a class="next" href="/"><span class="label">{{t_next}}</span><span class="title">Начало</span></a>
+</div>

@@ -1,0 +1,20 @@
+<h1>Base64</h1>
+<p>Base64 helpers come bundled in <code>crow::utility</code>. Use them for HTTP basic auth headers, embedded images, signed cookies, and similar tasks.</p>
+
+<h2 id="encode">Encoding</h2>
+<pre><code class="language-cpp">#include "crow/utility.h"
+
+std::string encoded = crow::utility::base64encode("Ada Lovelace", 12);
+// encoded == "QWRhIExvdmVsYWNl"
+</code></pre>
+
+<h2 id="decode">Decoding</h2>
+<pre><code class="language-cpp">std::string decoded = crow::utility::base64decode(encoded, encoded.size());
+</code></pre>
+
+<p>Both functions are pure and allocate; they're fine to call inside handlers but reach for an arena allocator if you process megabytes per request.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/websockets"><span class="label">{{t_prev}}</span><span class="title">WebSockets</span></a>
+    <a class="next" href="/guides/testing"><span class="label">{{t_next}}</span><span class="title">Writing tests</span></a>
+</div>

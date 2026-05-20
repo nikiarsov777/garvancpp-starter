@@ -1,0 +1,26 @@
+<h1>API Reference</h1>
+<p>This page links to the generated API reference for Garvan and Crow. The reference is produced by Doxygen from header comments in the source tree.</p>
+
+<h2 id="about">About</h2>
+<p>The reference covers two layers:</p>
+<ul>
+    <li><strong>Garvan</strong> &mdash; the model/controller/service base classes, the ORM builder, the migration runner, and the helpers under <code>vendors/Garvan/include/</code>.</li>
+    <li><strong>Crow</strong> &mdash; the underlying HTTP server, router, JSON, mustache, multipart and websocket subsystems.</li>
+</ul>
+
+<h2 id="namespaces">Namespaces</h2>
+<ul>
+    <li><code>Garvan</code> &mdash; framework classes (<code>BaseContoller</code>, <code>BaseService</code>, <code>Builder</code>, <code>Migration</code>, <code>MigrationRunner</code>).</li>
+    <li><code>ORM</code> &mdash; <code>OModel</code> base and related types.</li>
+    <li><code>crow</code> &mdash; everything from upstream Crow: <code>SimpleApp</code>, <code>App&lt;...&gt;</code>, <code>request</code>, <code>response</code>, <code>json::rvalue</code>, <code>json::wvalue</code>, <code>mustache::template_t</code>.</li>
+</ul>
+
+<div class="admonition note">
+    <div class="admonition-title">Status</div>
+    <p>The Doxygen output is not yet wired into this site. Until it is, refer directly to the headers in <code>vendors/Garvan/include/</code> and <code>vendors/Garvan/crow/</code>.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/helpers"><span class="label">{{t_prev}}</span><span class="title">Helpers</span></a>
+    <a class="next" href="/"><span class="label">{{t_next}}</span><span class="title">Home</span></a>
+</div>

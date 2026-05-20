@@ -1,0 +1,81 @@
+<h1>Setup on Linux</h1>
+<p>This page walks you through getting Garvan installed and building your first executable on a Linux machine.</p>
+
+<h2 id="requirements">Requirements</h2>
+<ul>
+    <li>A C++ compiler with C++20 support (GCC 11+ or Clang 12+).</li>
+    <li>CMake 3.20 or later.</li>
+    <li>Asio development headers (1.28 or later).</li>
+    <li><code>libpq</code>, <code>libmysqlcppconn</code>, <code>libmongoc</code>, <code>libsqlite3</code>, <code>libmonetdb-mapi</code></li>
+    <li>Optional: OpenSSL for HTTPS, zlib for compression.</li>
+</ul>
+
+<div class="admonition note">
+    <div class="admonition-title">Note</div>
+    <p>The bundled <code>libgarvan.a</code> in <code>vendors/Garvan/</code> already links Crow internally, so you only need the system libraries listed above.</p>
+</div>
+
+<h2 id="install-libgarvan">Installing libgarvan</h2>
+<p>The fastest path is to clone the starter repository, which ships <code>libgarvan.a</code>, the Crow headers, and a working <code>CMakeLists.txt</code>:</p>
+
+<pre><code class="language-bash">git clone https://github.com/nikiarsov777/garvan-starter.git my-app
+cd my-app
+</code></pre>
+
+<p>On Debian/Ubuntu you can install the database drivers in one shot:</p>
+
+<pre><code class="language-bash">sudo apt update
+sudo apt install -y \
+    build-essential cmake \
+    libasio-dev libssl-dev zlib1g-dev \
+    libpqxx-dev libmysqlcppconn-dev libsqlite3-dev \
+    libmongoc-dev libbson-dev
+</code></pre>
+
+<h2 id="build-from-source">Building from source</h2>
+<p>If you want to build Garvan itself (rather than use the bundled archive), clone the source tree and run CMake:</p>
+
+<pre><code class="language-bash">git clone https://github.com/nikiarsov777/garvancpp-starter.git
+cd garvan
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+sudo cmake --install build
+</code></pre>
+
+<h2 id="compile-your-project">Compiling your project</h2>
+<p>Add the following to your project's <code>CMakeLists.txt</code>:</p>
+
+<pre><code class="language-cmake">cmake_minimum_required(VERSION 3.20)
+project(MyApp CXX)
+set(CMAKE_CXX_STANDARD 20)
+
+add_executable(my_app main.cpp)
+
+target_include_directories(my_app PRIVATE
+    vendors/Garvan
+    vendors/Garvan/include
+)
+
+target_link_libraries(my_app PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendors/Garvan/libgarvan.a
+    pthread
+)
+</code></pre>
+
+<p>Then build:</p>
+
+<pre><code class="language-bash">cmake -S . -B build
+cmake --build build
+./build/my_app
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/">
+        <span class="label">{{t_prev}}</span>
+        <span class="title">Home</span>
+    </a>
+    <a class="next" href="/getting_started/setup_macos">
+        <span class="label">{{t_next}}</span>
+        <span class="title">Setup on macOS</span>
+    </a>
+</div>

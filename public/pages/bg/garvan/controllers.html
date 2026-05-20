@@ -1,0 +1,50 @@
+<h1>Контролери</h1>
+<p>Контролерът свързва HTTP маршрутите със слоя за данни. Всеки наследява <code>Garvan::BaseContoller</code> и експонира петте REST действия, които очаквате.</p>
+
+<h2 id="base-controller">BaseController</h2>
+<p>Базовият клас декларира малък контракт:</p>
+
+<pre><code class="language-cpp">class BaseContoller : public Helper
+{
+public:
+    virtual json index() = 0;          // GET /resource
+    json         create(json model);   // POST /resource
+    json         read(string id);      // GET /resource/:id
+    json         update(json model);   // PUT /resource/:id
+    void         erease();             // DELETE /resource/:id
+    json         getById(string id);
+};
+</code></pre>
+
+<p>Само <code>index()</code> е чисто виртуален &mdash; всичко останало има стандартна имплементация, която можете да override-нете за всеки ресурс.</p>
+
+<h2 id="rest-actions">REST действия</h2>
+<p>Типичен контролер за ресурс:</p>
+
+<pre><code class="language-cpp">// app/controllers/api/PostController.h
+#pragma once
+#include "controller/BaseContoller.h"
+#include "../../services/PostService.h"
+
+class PostController : public Garvan::BaseContoller
+{
+public:
+    json index() override {
+        PostService svc;
+        return svc.index();
+    }
+};
+</code></pre>
+
+<p>Свържете го с маршрут в <code>routes/ApiRoutes.cpp</code>:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/api/posts")([] {
+    PostController c;
+    return jsonresponse{ c.index() };
+});
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/models"><span class="label">{{t_prev}}</span><span class="title">Модели</span></a>
+    <a class="next" href="/garvan/services"><span class="label">{{t_next}}</span><span class="title">Услуги</span></a>
+</div>

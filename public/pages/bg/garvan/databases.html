@@ -1,0 +1,37 @@
+<h1>Драйвери за бази данни</h1>
+<p>Garvan поддържа пет backend-а още в кутията. Превключването между тях е въпрос на смяна на <code>DATABASE_TYPE</code> в <code>.env</code> &mdash; същият код за модели/контролери/услуги продължава да работи.</p>
+
+<h2 id="mysql">MySQL</h2>
+<p>Базиран на <code>mysqlcppconn</code>. Настройките за връзка живеят в <code>DATABASE_URL</code>:</p>
+<pre><code class="language-bash">DATABASE_TYPE=mysql
+DATABASE_URL="mysql://user:pass@127.0.0.1:3306/dbname"
+</code></pre>
+
+<h2 id="postgres">PostgreSQL</h2>
+<p>Базиран на <code>libpqxx</code>. Поддържа SSL чрез <code>?sslmode=require</code>.</p>
+<pre><code class="language-bash">DATABASE_TYPE=postgres
+DATABASE_URL="postgres://user:pass@127.0.0.1:5432/dbname?sslmode=disable"
+</code></pre>
+
+<h2 id="mongodb">MongoDB</h2>
+<p>Базиран на <code>mongocxx</code>. Заявките се компилират към команди, а не към SQL.</p>
+<pre><code class="language-bash">DATABASE_TYPE=mongodb
+DATABASE_URL="mongodb://user:pass@127.0.0.1:27017/dbname"
+</code></pre>
+
+<h2 id="monetdb">MonetDB</h2>
+<p>Базиран на <code>libmapi</code>. Полезен за аналитични натоварвания върху същия слой с модели.</p>
+<pre><code class="language-bash">DATABASE_TYPE=monetdb
+DATABASE_URL="monetdb://user:pass@127.0.0.1:50000/dbname"
+</code></pre>
+
+<h2 id="sqlite">SQLite</h2>
+<p>Базиран на <code>libsqlite3</code>. Идеален за разработка и малки деплои.</p>
+<pre><code class="language-bash">DATABASE_TYPE=sqlite
+DATABASE_URL="sqlite:db/database.sqlite3"
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/kalpasan"><span class="label">{{t_prev}}</span><span class="title">Kalpasan CLI</span></a>
+    <a class="next" href="/garvan/helpers"><span class="label">{{t_next}}</span><span class="title">Помощни инструменти</span></a>
+</div>

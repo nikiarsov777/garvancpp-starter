@@ -1,0 +1,26 @@
+<h1>Статични файлове</h1>
+<p>Crow регистрира маршрут на <code>/static/&lt;path&gt;</code>, който сервира всеки файл от директорията <code>static/</code> на проекта ви. Garvan наследява това безплатно.</p>
+
+<h2 id="default">Стандартният static handler</h2>
+<p>Поставете asset-и в <code>static/css/</code>, <code>static/js/</code> или <code>static/img/</code> и ги цитирайте в шаблоните си:</p>
+
+<pre><code class="language-html">&lt;link rel="stylesheet" href="/static/css/app.css"&gt;
+&lt;script src="/static/js/bootstrap.min.js"&gt;&lt;/script&gt;
+&lt;img src="/static/img/logo.png"&gt;
+</code></pre>
+
+<p>Handler-ът задава правилен <code>Content-Type</code> въз основа на разширението на файла и поддържа <code>Range</code> заявки.</p>
+
+<h2 id="customizing">Персонализация</h2>
+<p>Директорията и URL префиксът са дефинирани като compile-time макроси в <code>vendors/Garvan/crow/settings.h</code>:</p>
+
+<pre><code class="language-cpp">#define CROW_STATIC_DIRECTORY "static/"
+#define CROW_STATIC_ENDPOINT  "/static/&lt;path&gt;"
+</code></pre>
+
+<p>Override-нете ги преди да включите <code>crow.h</code>, ако имате нужда от различни стойности. За статични директории по blueprint вижте <a href="/guides/blueprints">Blueprints</a>.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/ssl"><span class="label">{{t_prev}}</span><span class="title">SSL</span></a>
+    <a class="next" href="/guides/blueprints"><span class="label">{{t_next}}</span><span class="title">Blueprints</span></a>
+</div>

@@ -1,0 +1,51 @@
+<h1>ORM / Query Builder</h1>
+<p>Слоят за данни на Garvan има две части. <code>Builder</code> генерира parameterized statement-и през <code>Grammar</code> за конкретната база и ги изпълнява през <code>DbClient</code>. <code>OModel</code> е базовият клас, който вашите модели наследяват, за да експонират builder методите директно.</p>
+
+<h2 id="builder">Builder</h2>
+<p>Builder-ът използва fluent API. Всяко извикване връща builder-а, така че можете да верижите условия:</p>
+
+<pre><code class="language-cpp">Builder qb(dbClient, grammar, "users",
+           /*public*/{"id","name","email"},
+           /*private*/{"password"});
+
+auto rows = qb
+    .where("active", "=", "1")
+    ->where("role", "=", "admin")
+    ->get();
+</code></pre>
+
+<p>Заявката е изцяло parameterized &mdash; стойностите от потребителя минават през native <code>PreparedStatement</code> binding, а не през конкатенация на низове. SQL injection не е на масата.</p>
+
+<p>Други удобни методи: <code>first()</code>, <code>firstOrFail()</code>, <code>find(id)</code>, <code>findOrFail(id)</code>, плюс <code>insert(json)</code>, <code>update(json)</code> и <code>remove()</code>.</p>
+
+<h2 id="omodel">OModel</h2>
+<p>Моделите наследяват <code>ORM::OModel</code> и декларират име на таблица и списъци с колони:</p>
+
+<pre><code class="language-cpp">class User : public ORM::OModel
+{
+public:
+    User() {
+        table          = "users";
+        primaryKey     = "id";
+        public_columns  = {"id", "name", "email"};
+        private_columns = {"password"};
+    }
+};
+</code></pre>
+
+<h2 id="grammars">Граматики за всяка база</h2>
+<p>Всеки драйвер предоставя <code>Grammar</code> subclass, който знае как да генерира правилния диалект:</p>
+<ul>
+    <li><code>PostgresGrammar</code></li>
+    <li><code>MysqlGrammar</code></li>
+    <li><code>SqliteGrammar</code></li>
+    <li><code>MonetdbGrammar</code></li>
+    <li><code>MongoGrammar</code> &mdash; произвежда Mongo команди, а не SQL.</li>
+</ul>
+
+<p>Правилната граматика се избира автоматично от <code>DATABASE_TYPE</code>. Обикновено не пипате тези класове директно.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/env"><span class="label">{{t_prev}}</span><span class="title">.env конфигурация</span></a>
+    <a class="next" href="/garvan/models"><span class="label">{{t_next}}</span><span class="title">Модели</span></a>
+</div>

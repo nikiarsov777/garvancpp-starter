@@ -1,0 +1,63 @@
+<h1>Маршрути</h1>
+<p>Маршрутът свързва HTTP метод + URL шаблон с обработчик. Garvan наследява compile-time рутера на Crow, който изгражда решаващо дърво от вашите дефиниции на маршрути &mdash; търсенията са O(log&nbsp;n) и не се използват регулярни изрази.</p>
+
+<h2 id="macro">Макросът CROW_ROUTE</h2>
+<p>Каноничният начин за деклариране на маршрут:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/hello")([] {
+    return "здравей";
+});
+</code></pre>
+
+<p>Можете да използвате и <code>app.route_dynamic("/hello")</code>, ако трябва да конструирате пътища по време на изпълнение, но макрос-формата е препоръчителна, защото се проверява при компилация.</p>
+
+<h2 id="url-parameters">URL параметри</h2>
+<p>Поставете параметри в ъглови скоби и ги приемете като аргументи на handler-а. Поддържат се <code>int</code>, <code>uint</code>, <code>double</code>, <code>string</code> и <code>path</code>:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/users/&lt;int&gt;")([](int id) {
+    return std::to_string(id);
+});
+
+CROW_ROUTE(app, "/files/&lt;path&gt;")([](std::string rest) {
+    return "поискахте: " + rest;
+});
+</code></pre>
+
+<h2 id="methods">HTTP методи</h2>
+<p>Маршрутите по подразбиране са <code>GET</code>. Използвайте <code>.methods(...)</code>, за да регистрирате допълнителни глаголи:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/users")
+    .methods("GET"_method, "POST"_method)
+([](const crow::request &amp;req) {
+    if (req.method == crow::HTTPMethod::POST) {
+        return crow::response(201, "created");
+    }
+    return crow::response("списък потребители");
+});
+</code></pre>
+
+<h2 id="handler">Handler</h2>
+<p>Handler-ът може да приема нула или повече аргументи. Първият може да е <code>const crow::request&amp;</code> за достъп до header-и и тяло; вторият може да е <code>crow::response&amp;</code>, ако искате да пишете отговора инкрементално и да извикате <code>res.end()</code> сами.</p>
+
+<h2 id="response">Отговор</h2>
+<p>Върнете <code>std::string</code> за тяло, или <code>crow::response</code>, когато имате нужда да зададете статус код или header-и явно:</p>
+
+<pre><code class="language-cpp">return crow::response(404, "не е намерено");
+</code></pre>
+
+<h2 id="catchall">Catchall маршрути</h2>
+<p>Използвайте <code>CROW_CATCHALL_ROUTE(app)</code>, за да дефинирате резервен маршрут, който се изпълнява, когато никой друг маршрут не съвпада. Документационният сайт, който четете, използва точно такъв, за да разрешава непознати пътища спрямо индекс на страниците.</p>
+
+<pre><code class="language-cpp">CROW_CATCHALL_ROUTE(app)([](const crow::request &amp;req) {
+    return crow::response(404, "няма такава страница: " + req.url);
+});
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/app">
+        <span class="label">{{t_prev}}</span><span class="title">App</span>
+    </a>
+    <a class="next" href="/guides/logging">
+        <span class="label">{{t_next}}</span><span class="title">Логиране</span>
+    </a>
+</div>
