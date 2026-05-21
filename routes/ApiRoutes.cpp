@@ -22,19 +22,6 @@ ApiRoutes::ApiRoutes(crow::SimpleApp &app)
       }
    };
 
-   // CROW_ROUTE(app, "/users")
-   // ([]()
-   //  {
-   //     auto header = crow::mustache::load_text("header.html");
-   //     // auto ctx["header"] = header;
-   //     auto page = crow::mustache::load("index.html");
-   //     json data;
-   //     data['header'] = header;
-   //     data['name'] = "Niki Arsov";
-   //     return crow::response(200, page.render(data));
-   //     //
-   //  });
-
    CROW_ROUTE(app, "/api/mysql/users")
    ([]()
     {
