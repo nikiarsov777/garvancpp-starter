@@ -222,8 +222,8 @@ errors, missing symbols, an incompatible system `libpqxx` / `mysqlcppconn` /
 it from source and drop the artifact back into `vendors/Garvan/`:
 
 ```bash
-git clone https://github.com/nikiarsov777/garvancpp-orm-pub.git
-cd garvancpp-orm-pub
+git clone https://github.com/nikiarsov777/garvancpp-vendor-pub.git
+cd garvancpp-vendor-pub
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j$(nproc)
 ```
@@ -454,8 +454,8 @@ echo "Build OK -> bin/app.bin"
 `vendors/Garvan/`:
 
 ```bash
-git clone https://github.com/nikiarsov777/garvancpp-orm-pub.git
-cd garvancpp-orm-pub
+git clone https://github.com/nikiarsov777/garvancpp-vendor-pub.git
+cd garvancpp-vendor-pub
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j$(nproc)
 ```
