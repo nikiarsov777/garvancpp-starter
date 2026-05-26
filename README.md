@@ -48,7 +48,6 @@ and deploy.
 ├── public/                 # mustache templates + multi-language docs pages
 ├── static/                 # css, js, images
 ├── vendors/Garvan/         # libgarvan.a, crow headers, kalpasan, garvan-migrate
-├── backs/                  # plain g++ fallback build scripts
 ├── main.cpp                # entry point — boots Crow on port 9090
 ├── CMakeLists.txt          # primary build
 └── .env                    # runtime configuration
