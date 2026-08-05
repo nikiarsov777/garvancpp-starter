@@ -28,6 +28,9 @@ and deploy.
   (en, bg, es, pt, ru, tr).
 - Scaffolding via the `kalpasan` CLI: models, controllers, services, migrations.
 - MVC-style layout: `app/models`, `app/controllers`, `app/services`, `routes/`.
+- Event bus + job queue with pluggable drivers (`SyncDriver` today; async / database
+  drivers pluggable via service providers).
+- Real SMTP mail sending (HTML, TLS / STARTTLS) via libcurl in `AppJobs::SendTestMail`.
 
 ### Project structure
 
@@ -37,11 +40,18 @@ and deploy.
 │   ├── controllers/        # web controllers
 │   │   └── api/            # JSON API controllers (psql, mysql, mongo, monet)
 │   ├── models/             # User, Role, Team, Post, Comment, ...
-│   └── services/           # business logic per backend
+│   ├── services/           # business logic per backend
+│   ├── events/             # AppEvents::UserRegistered ...
+│   ├── jobs/               # AppJobs::SendTestMail (real SMTP via libcurl)
+│   ├── listeners/          # LogRegistrationListener, SendWelcomeEmailListener
+│   └── providers/          # AppServiceProvider, JobServiceProvider, EventServiceProvider
 ├── routes/
 │   ├── ApiRoutes.cpp       # /api/* endpoints
 │   ├── WebRoutes.cpp       # / and language switch
-│   └── DocsRouter.cpp      # multi-language docs router
+│   ├── DocsRouter.cpp      # multi-language docs router
+│   ├── JobRoute.cpp        # /api/jobs/* (direct job dispatch + status)
+│   ├── EventRoute.cpp      # /api/events/* (fire events + status)
+│   └── AdminRoute.cpp      # /api/admin/{jobs,events}* (bearer-guarded; used by kalpasan)
 ├── db/
 │   ├── migrations/         # *.<backend>.sql files
 │   └── seeders/            # *.sql seeders run by kalpasan
@@ -62,6 +72,8 @@ The HTTP server is started in `main.cpp:16` and listens on **port 9090** by defa
 - Asio 1.28+ development headers.
 - Database client libraries: `libpqxx`, `libmysqlcppconn`, `libsqlite3`,
   `libmongoc` / `libbson` (mongocxx), `libmonetdb-mapi`.
+- `libcurl` (SMTP transport for `AppJobs::SendTestMail`; also used by
+  `kalpasan` for talking to the admin API).
 - Optional: OpenSSL (HTTPS) and zlib (compression).
 
 Debian / Ubuntu one-liner:
@@ -71,9 +83,13 @@ sudo apt update
 sudo apt install -y \
     build-essential cmake \
     libasio-dev libssl-dev zlib1g-dev \
+    libcurl4-openssl-dev \
     libpqxx-dev libmysqlcppconn-dev libsqlite3-dev \
     libmongoc-dev libbson-dev
 ```
+
+CMake picks libcurl up automatically via `find_package(CURL REQUIRED)` and
+links `CURL::libcurl` into `app_bin`.
 
 ### Getting started
 
@@ -246,6 +262,103 @@ app with `cmake --build build -j` or `./make.sh`.
 | `./kalpasan db:rollback`               | Delegates to `garvan-migrate down`                 |
 | `./kalpasan db:seed`                   | Run files in `db/seeders/`                         |
 | `./kalpasan serve --watch`             | Rebuild and restart on `.cpp` / `.h` change        |
+| `./kalpasan job:list`                  | `GET /api/admin/jobs` — list registered job classes|
+| `./kalpasan job:dispatch <Name> [--field k=v]` | `POST /api/admin/jobs/dispatch` — dispatch a job with JSON payload |
+| `./kalpasan event:list`                | `GET /api/admin/events` — list registered events   |
+| `./kalpasan event:fire <Name> [--field k=v]`   | `POST /api/admin/events/fire` — fire an event with payload         |
+| `./kalpasan route:list`                | Print HTTP routes                                  |
+| `./kalpasan config:show` / `config:get` / `config:set` | Inspect / edit `.env` values          |
+| `./kalpasan config:key:generate`       | Generate a new `APP_KEY` (base64 32-byte)          |
+
+Runtime verbs (`job:*`, `event:*`) are HTTP clients that talk to the
+running app via loopback. They read `KALPASAN_ADMIN_URL` (default
+`http://127.0.0.1:9090`) and `KALPASAN_ADMIN_TOKEN` from `.env`. The
+`AdminRoute` handler in the app requires all three: a non-empty token,
+a loopback source IP (`127.0.0.1` or `::1`), and a matching `Bearer`
+header — otherwise it returns 401/403/503 with a JSON error body.
+
+### Jobs & Events
+
+The app boots three service providers in `main.cpp` (order matters —
+`AppServiceProvider` first, then jobs, then events):
+
+```
+AppKernel::bootAll()
+  ├── AppServiceProvider          (binds queue drivers)
+  ├── JobServiceProvider          (registers job classes)
+  └── EventServiceProvider        (registers events + listeners)
+```
+
+End-to-end pipeline exercised by the sample event:
+
+```
+GET /api/events/user-registered?email=...&name=...&id=...
+  → EventDispatcher::fire(UserRegistered)
+      → LogRegistrationListener::handle()      (sync log line)
+      → SendWelcomeEmailListener::handle()
+           → JobDispatcher::dispatch(SendTestMail)
+                → SyncDriver (inline, this thread)
+                     → SendTestMail::handle()  (libcurl SMTP send)
+```
+
+**Adding a new job**
+
+1. Create `app/jobs/MyJob.{h,cpp}` deriving from `Garvan::Job`, override
+   `handle()`, `jobName()`, `payload()` and provide a static
+   `fromPayload(const Garvan::JsonValue&)` factory.
+2. Register it in `app/providers/JobServiceProvider.cpp` with:
+   ```cpp
+   Garvan::JobRegistry::bind("MyJob", &AppJobs::MyJob::fromPayload);
+   ```
+   ⚠️ Do **not** use `GARVAN_REGISTER_JOB(AppJobs::MyJob)` for user jobs.
+   The macro stringifies the whole token and registers the key as
+   `"AppJobs::MyJob"`, which then does not match `jobName()` (or the
+   short name expected by `kalpasan job:dispatch`). See
+   `app/providers/JobServiceProvider.cpp:18` for the pattern in use.
+3. Rebuild (`./make.sh`) and restart `./bin/app.bin`.
+
+**Adding a new event + listener**
+
+1. Create the event class in `app/events/` (derive from `Garvan::Event`).
+2. Create the listener in `app/listeners/` (derive from
+   `Garvan::Listener<YourEvent>`) and override `handle()`.
+3. Register both in `app/providers/EventServiceProvider.cpp`
+   (`EventDispatcher::listen<...>()` + `GARVAN_REGISTER_EVENT(...)`).
+
+### Mail configuration
+
+`AppJobs::SendTestMail` sends a real HTML email over SMTP using libcurl.
+It reads the `MAIL_*` block from `.env`:
+
+```dotenv
+MAIL_DRIVER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=465                    # 465 -> implicit TLS (smtps://)
+                                 # 587 -> STARTTLS   (smtp:// + CURLUSESSL_ALL)
+MAIL_USERNAME="user@example.com"
+MAIL_PASSWORD="app-password"
+MAIL_ENCRYPTION=tls              # ssl / smtps -> force implicit TLS
+MAIL_FROM_ADDRESS="user@example.com"
+MAIL_FROM_NAME="Your App"
+MAIL_AUTHENTICATION=plain        # informational; libcurl auto-negotiates
+```
+
+The RFC 822 message is `Content-Type: text/html; charset=UTF-8` with
+8-bit CTE, so the `body` field may contain arbitrary HTML.
+
+**Debugging SMTP dialog**
+
+If a send silently fails or ends up in spam, temporarily flip verbose
+mode in `app/jobs/SendTestMail.cpp`:
+
+```cpp
+// Set to 1L при debug на TLS handshake / SMTP dialog.
+curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);   // ← change 0L to 1L
+```
+
+Rebuild, restart, retry, then read the full TLS handshake + SMTP
+dialog printed to the server's stdout. **Do not commit this change** —
+production logs should stay clean.
 
 ### Routes
 
@@ -268,6 +381,19 @@ JSON API (registered in `routes/ApiRoutes.cpp`):
 | GET    | `/api/mongo/users`                    | List users from MongoDB              |
 | POST   | `/api/mongo/users`                    | Create user in MongoDB               |
 
+Jobs, events and admin (all served by `main.cpp`):
+
+| Method | Path                              | Notes                                         |
+| ------ | --------------------------------- | --------------------------------------------- |
+| GET    | `/api/jobs/send-mail`             | Direct `SendTestMail` dispatch (bypass event bus). Query: `to`, `subject`, `body` |
+| GET    | `/api/jobs/status`                | Bound drivers + registry size                 |
+| GET    | `/api/events/user-registered`     | Fire `UserRegistered`. Query: `email`, `name`, `id` |
+| GET    | `/api/events/status`              | Listener counts per known event               |
+| GET    | `/api/admin/jobs`                 | List registered jobs (bearer + loopback)      |
+| POST   | `/api/admin/jobs/dispatch`        | Dispatch by name + JSON payload (bearer + loopback) |
+| GET    | `/api/admin/events`               | List registered events (bearer + loopback)    |
+| POST   | `/api/admin/events/fire`          | Fire by name + JSON payload (bearer + loopback) |
+
 Web (`routes/WebRoutes.cpp`): `GET /` serves the docs home, `GET /lang/<code>`
 sets the language cookie and redirects back, and the catch-all route resolves
 any other path against the built-in docs index.
@@ -282,6 +408,22 @@ curl http://localhost:9090/api/psql/users
 curl -X POST http://localhost:9090/api/psql/users \
      -H "Content-Type: application/json" \
      -d '{"name":"Ada","email":"ada@example.com","password":"secret"}'
+
+# Fire an event → runs the full listener chain → sends real mail
+curl "http://localhost:9090/api/events/user-registered?email=you@x.com&name=You&id=1"
+
+# Direct job dispatch (bypass event bus) with HTML body
+curl "http://localhost:9090/api/jobs/send-mail?to=you@x.com&subject=Hi&body=<h1>Hello</h1>"
+
+# Debug endpoints
+curl http://localhost:9090/api/jobs/status
+curl http://localhost:9090/api/events/status
+
+# Admin API (same channel as `kalpasan job:dispatch`)
+curl -X POST http://localhost:9090/api/admin/jobs/dispatch \
+     -H 'Content-Type: application/json' \
+     -H "Authorization: Bearer $KALPASAN_ADMIN_TOKEN" \
+     -d '{"job":"SendTestMail","payload":{"to":"you@x.com","subject":"Hi","body":"<p>HTML</p>"}}'
 ```
 
 ### Built-in documentation site
@@ -323,6 +465,10 @@ GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
 - Mustache шаблони и вградена многоезична документация (en, bg, es, pt, ru, tr).
 - Скафолдинг през `kalpasan`: модели, контролери, услуги, миграции.
 - MVC структура: `app/models`, `app/controllers`, `app/services`, `routes/`.
+- Event bus + job queue със сменяеми driver-и (`SyncDriver` в момента; async /
+  database driver-и се bind-ват през service provider-и).
+- Реален SMTP mail send (HTML, TLS / STARTTLS) през libcurl в
+  `AppJobs::SendTestMail`.
 
 ### Структура на проекта
 
@@ -336,10 +482,13 @@ GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
 - Asio 1.28+ development хедъри.
 - Драйвери: `libpqxx`, `libmysqlcppconn`, `libsqlite3`, `libmongoc` /
   `libbson` (mongocxx), `libmonetdb-mapi`.
+- `libcurl` (SMTP транспорт за `AppJobs::SendTestMail`; ползва се и от
+  `kalpasan` за admin API-то).
 - По избор: OpenSSL за HTTPS и zlib за компресия.
 
 За Debian / Ubuntu използвайте същата `apt install` команда от английската
-секция.
+секция (задължително и `libcurl4-openssl-dev`). CMake прихваща libcurl
+автоматично през `find_package(CURL REQUIRED)` и линква `CURL::libcurl`.
 
 ### Бърз старт
 
@@ -478,6 +627,103 @@ cmake --build build -j$(nproc)
 | `./kalpasan db:rollback`               | Връща последната миграция                           |
 | `./kalpasan db:seed`                   | Пуска файлове от `db/seeders/`                      |
 | `./kalpasan serve --watch`             | Билдва и рестартира при промяна на `.cpp` / `.h`    |
+| `./kalpasan job:list`                  | `GET /api/admin/jobs` — списък регистрирани jobs    |
+| `./kalpasan job:dispatch <Name> [--field k=v]` | `POST /api/admin/jobs/dispatch` — dispatch с JSON payload |
+| `./kalpasan event:list`                | `GET /api/admin/events` — списък регистрирани events|
+| `./kalpasan event:fire <Name> [--field k=v]`   | `POST /api/admin/events/fire` — fire с payload    |
+| `./kalpasan route:list`                | Извежда HTTP routes                                 |
+| `./kalpasan config:show` / `config:get` / `config:set` | Работа с `.env` стойности                   |
+| `./kalpasan config:key:generate`       | Генерира нов `APP_KEY` (base64 32-byte)             |
+
+Runtime verbs (`job:*`, `event:*`) са HTTP клиенти, които говорят с
+работещото приложение по loopback. Четат `KALPASAN_ADMIN_URL`
+(default `http://127.0.0.1:9090`) и `KALPASAN_ADMIN_TOKEN` от `.env`.
+`AdminRoute` handler-ът иска и трите: непразен токен, loopback IP
+(`127.0.0.1` или `::1`) и съвпадащ `Bearer` header — иначе връща
+401/403/503 с JSON error body.
+
+### Jobs & Events
+
+Приложението boot-ва три service provider-а в `main.cpp` (редът има
+значение — `AppServiceProvider` първи, после jobs, после events):
+
+```
+AppKernel::bootAll()
+  ├── AppServiceProvider          (bind-ва queue driver-и)
+  ├── JobServiceProvider          (регистрира job класове)
+  └── EventServiceProvider        (регистрира events + listener-и)
+```
+
+End-to-end pipeline от sample event-а:
+
+```
+GET /api/events/user-registered?email=...&name=...&id=...
+  → EventDispatcher::fire(UserRegistered)
+      → LogRegistrationListener::handle()      (sync log ред)
+      → SendWelcomeEmailListener::handle()
+           → JobDispatcher::dispatch(SendTestMail)
+                → SyncDriver (inline, същия thread)
+                     → SendTestMail::handle()  (libcurl SMTP send)
+```
+
+**Създаване на нов job**
+
+1. Файл `app/jobs/MyJob.{h,cpp}` наследяващ `Garvan::Job`; override
+   `handle()`, `jobName()`, `payload()` и статичен фабричен
+   `fromPayload(const Garvan::JsonValue&)`.
+2. Регистрация в `app/providers/JobServiceProvider.cpp`:
+   ```cpp
+   Garvan::JobRegistry::bind("MyJob", &AppJobs::MyJob::fromPayload);
+   ```
+   ⚠️ **Не използвай** `GARVAN_REGISTER_JOB(AppJobs::MyJob)` за user
+   jobs. Макросът stringify-ва целия token и регистрира ключа като
+   `"AppJobs::MyJob"`, което не съвпада с `jobName()` (нито с
+   short name-a, който `kalpasan job:dispatch` очаква). Виж
+   pattern-a в `app/providers/JobServiceProvider.cpp:18`.
+3. Rebuild (`./make.sh`) и рестарт на `./bin/app.bin`.
+
+**Създаване на нов event + listener**
+
+1. Event class в `app/events/` (наследява `Garvan::Event`).
+2. Listener в `app/listeners/` (наследява
+   `Garvan::Listener<YourEvent>`) с override на `handle()`.
+3. Регистрация в `app/providers/EventServiceProvider.cpp`
+   (`EventDispatcher::listen<...>()` + `GARVAN_REGISTER_EVENT(...)`).
+
+### Mail конфигурация
+
+`AppJobs::SendTestMail` праща реален HTML email по SMTP през libcurl.
+Чете `MAIL_*` блока от `.env`:
+
+```dotenv
+MAIL_DRIVER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=465                    # 465 -> implicit TLS (smtps://)
+                                 # 587 -> STARTTLS   (smtp:// + CURLUSESSL_ALL)
+MAIL_USERNAME="user@example.com"
+MAIL_PASSWORD="app-password"
+MAIL_ENCRYPTION=tls              # ssl / smtps -> форсира implicit TLS
+MAIL_FROM_ADDRESS="user@example.com"
+MAIL_FROM_NAME="Your App"
+MAIL_AUTHENTICATION=plain        # informational; libcurl auto-negotiates
+```
+
+RFC 822 message-ът е `Content-Type: text/html; charset=UTF-8` с
+8-bit CTE, така че `body` полето може да съдържа произволен HTML.
+
+**Debug на SMTP dialog**
+
+Ако send-ът тихо fail-ва или mail-ът отива в spam, временно включи
+verbose в `app/jobs/SendTestMail.cpp`:
+
+```cpp
+// Set to 1L при debug на TLS handshake / SMTP dialog.
+curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);   // ← смени 0L на 1L
+```
+
+Rebuild, рестарт, повтори опита и прочети целия TLS handshake +
+SMTP dialog в stdout лога на сървъра. **Не commit-вай тази промяна** —
+production лога трябва да е чист.
 
 ### Маршрути
 
@@ -495,6 +741,22 @@ curl http://localhost:9090/api/psql/users
 curl -X POST http://localhost:9090/api/psql/users \
      -H "Content-Type: application/json" \
      -d '{"name":"Ada","email":"ada@example.com","password":"secret"}'
+
+# Fire event → пълен listener chain → реален mail
+curl "http://localhost:9090/api/events/user-registered?email=you@x.com&name=You&id=1"
+
+# Директен job dispatch (bypass event bus) с HTML body
+curl "http://localhost:9090/api/jobs/send-mail?to=you@x.com&subject=Hi&body=<h1>Hello</h1>"
+
+# Debug endpoints
+curl http://localhost:9090/api/jobs/status
+curl http://localhost:9090/api/events/status
+
+# Admin API (същия канал, който `kalpasan job:dispatch` ползва)
+curl -X POST http://localhost:9090/api/admin/jobs/dispatch \
+     -H 'Content-Type: application/json' \
+     -H "Authorization: Bearer $KALPASAN_ADMIN_TOKEN" \
+     -d '{"job":"SendTestMail","payload":{"to":"you@x.com","subject":"Hi","body":"<p>HTML</p>"}}'
 ```
 
 ### Вградена документация
