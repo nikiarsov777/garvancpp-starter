@@ -1,12 +1,15 @@
-#ifndef GRAMMAR_H
-#define GRAMMAR_H
+#ifndef GARVAN_GRAMMAR_H
+#define GARVAN_GRAMMAR_H
 
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <algorithm>
+#include <array>
 #include <cctype>
+#include <ranges>
 #include <stdexcept>
 #include <unordered_set>
 #include "tools/JsonValue.h"
@@ -87,7 +90,7 @@ protected:
     // place in an SQL identifier or BSON key and frequently breaks
     // C-string-based driver APIs in surprising ways. Reject early.
     // ---------------------------------------------------------------
-    static void assertSafeIdentifier(const string& id)
+    static void assertSafeIdentifier(std::string_view id)
     {
         if (id.empty()) {
             throw runtime_error("Grammar: empty identifier");
@@ -105,21 +108,15 @@ protected:
     // user-supplied via Builder::where(field, op, value). We never
     // bind operators (they aren't bindable), so an allowlist is the
     // only safe option.
+    //
+    // Allowlist е `constexpr std::array<string_view>` — не се пази
+    // heap-allocated hash-set в статична памет и не се плаща
+    // hashing overhead per call. При ~20 елемента linear search през
+    // ranges::find е бърз.
     // ---------------------------------------------------------------
-    static string sanitizeOperator(const string& op)
+    [[nodiscard]] static string sanitizeOperator(std::string_view op)
     {
-        size_t a = op.find_first_not_of(" \t\r\n");
-        size_t b = op.find_last_not_of(" \t\r\n");
-        if (a == string::npos) {
-            throw runtime_error("Grammar: empty operator");
-        }
-        string trimmed = op.substr(a, b - a + 1);
-
-        string upper = trimmed;
-        transform(upper.begin(), upper.end(), upper.begin(),
-                  [](unsigned char c){ return std::toupper(c); });
-
-        static const unordered_set<string> allowed = {
+        static constexpr std::array<std::string_view, 23> ALLOWED_OPS{{
             "=", "!=", "<>", "<", "<=", ">", ">=",
             "LIKE", "NOT LIKE", "ILIKE", "NOT ILIKE",
             "IS", "IS NOT",
@@ -128,26 +125,40 @@ protected:
             "GLOB", "NOT GLOB",
             "MATCH", "NOT MATCH",
             "REGEXP", "NOT REGEXP"
-        };
+        }};
 
-        if (allowed.count(trimmed) > 0) return trimmed;
-        if (allowed.count(upper) > 0)   return upper;
+        const std::size_t a = op.find_first_not_of(" \t\r\n");
+        const std::size_t b = op.find_last_not_of(" \t\r\n");
+        if (a == std::string_view::npos) {
+            throw runtime_error("Grammar: empty operator");
+        }
+        std::string trimmed{op.substr(a, b - a + 1)};
 
-        throw runtime_error("Grammar: rejected operator: '" + op + "'");
+        std::string upper = trimmed;
+        std::transform(upper.begin(), upper.end(), upper.begin(),
+                       [](unsigned char c){ return std::toupper(c); });
+
+        if (std::ranges::find(ALLOWED_OPS, std::string_view{trimmed}) != ALLOWED_OPS.end())
+            return trimmed;
+        if (std::ranges::find(ALLOWED_OPS, std::string_view{upper}) != ALLOWED_OPS.end())
+            return upper;
+
+        throw runtime_error("Grammar: rejected operator: '" + std::string(op) + "'");
     }
 
     // ORDER BY allowlist (identifiers, commas, dots, spaces, ASC/DESC keywords).
     // ORDER BY positions are not bindable.
-    static string sanitizeOrderBy(const string& order)
+    [[nodiscard]] static std::string sanitizeOrderBy(std::string_view order)
     {
         for (char c : order) {
             unsigned char uc = static_cast<unsigned char>(c);
             if (!(std::isalnum(uc) || c == '_' || c == ',' || c == '.'
                   || c == ' ' || c == '\t')) {
-                throw runtime_error("Grammar: invalid ORDER BY characters: '" + order + "'");
+                throw runtime_error("Grammar: invalid ORDER BY characters: '"
+                                    + std::string(order) + "'");
             }
         }
-        return order;
+        return std::string(order);
     }
 
     // Compile a WHERE clause using placeholders. Each value is appended
@@ -176,4 +187,4 @@ protected:
 
 };
 
-#endif
+#endif // GARVAN_GRAMMAR_H

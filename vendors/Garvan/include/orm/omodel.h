@@ -1,7 +1,9 @@
-#ifndef MODEL_H
-#define MODEL_H
-#include <pqxx/pqxx>
-#include <pqxx/field>
+#ifndef GARVAN_OMODEL_H
+#define GARVAN_OMODEL_H
+// NOTE: <pqxx/pqxx> се изнесе от този header — това е ORM-neutral base
+// клас и Postgres driver-ът няма работа тук. Файловете, които реално
+// имат нужда от pqxx (например `orm/connection/pg_connection.cpp`),
+// го инклудват директно.
 #include "../db/DbClient.h"
 
 using namespace std;
@@ -43,4 +45,4 @@ namespace ORM
         string id;
     };
 }
-#endif // MODEL_H
+#endif // GARVAN_OMODEL_H
