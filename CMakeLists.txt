@@ -12,6 +12,9 @@ find_package(PkgConfig REQUIRED)
 # MongoDB C++ driver (libmongocxx + libbsoncxx)
 pkg_check_modules(MONGOCXX REQUIRED IMPORTED_TARGET libmongocxx libbsoncxx)
 
+# libcurl -- нужно за SMTP send в AppJobs::SendTestMail
+find_package(CURL REQUIRED)
+
 # MonetDB MAPI - pkg-config is broken on this system, so we set it manually
 set(MONETDB_INCLUDE_DIRS /usr/include/monetdb)
 set(MONETDB_LIBRARIES mapi)
@@ -27,6 +30,11 @@ file(GLOB_RECURSE SOURCES
     "app/controllers/api/*.cpp"
     "app/models/*.cpp"
     "app/services/*.cpp"
+    # Jobs + Events + Providers (Phase A)
+    "app/providers/*.cpp"
+    "app/jobs/*.cpp"
+    "app/events/*.cpp"
+    "app/listeners/*.cpp"
 )
 
 # 2. Събиране на всички .h файлове (за да се виждат в Qt Creator)
@@ -58,6 +66,10 @@ target_include_directories(app_bin PRIVATE
     .
     app/models
     app/controllers
+    app/providers
+    app/jobs
+    app/events
+    app/listeners
 
     vendors/Garvan
     vendors/Garvan/include
@@ -68,6 +80,10 @@ target_include_directories(app_bin PRIVATE
     vendors/Garvan/orm/grammar
     vendors/Garvan/service
     vendors/Garvan/tools
+    vendors/Garvan/include/queue
+    vendors/Garvan/include/queue/drivers
+    vendors/Garvan/include/events
+    vendors/Garvan/include/app
 
     ${MONGOCXX_INCLUDE_DIRS}
     ${MONETDB_INCLUDE_DIRS}
@@ -79,6 +95,7 @@ link_directories(/usr/lib/x86_64-linux-gnu)
 target_link_libraries(app_bin PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/vendors/Garvan/libgarvan.a")
 target_link_libraries(app_bin PRIVATE pqxx pq mysqlcppconn mapi sqlite3)
 target_link_libraries(app_bin PRIVATE ${MONGOCXX_LIBRARIES} ${MONETDB_LIBRARIES})
+target_link_libraries(app_bin PRIVATE CURL::libcurl)
 
 # Име на изходния файл
 set_target_properties(app_bin PROPERTIES OUTPUT_NAME app.bin)

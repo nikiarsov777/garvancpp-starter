@@ -189,4 +189,9 @@ public:
         return false;
     }
 };
+
+// Convenience alias — позволява `Garvan::JsonValue` в новите API
+// (queue/, events/), паралелно със стария глобален `JsonValue`.
+namespace Garvan { using JsonValue = ::JsonValue; }
+
 #endif // JSONVALUE_H

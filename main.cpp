@@ -2,13 +2,22 @@
 #include <cctype>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <string>
 
 #include "vendors/Garvan/crow.h"
 #include "vendors/Garvan/include/tools/Helper.h"
+#include "vendors/Garvan/include/app/AppKernel.h"
 
 #include "routes/ApiRoutes.h"
 #include "routes/WebRoutes.h"
+#include "routes/JobRoute.h"
+#include "routes/EventRoute.h"
+#include "routes/AdminRoute.h"
+
+#include "app/providers/AppServiceProvider.h"
+#include "app/providers/JobServiceProvider.h"
+#include "app/providers/EventServiceProvider.h"
 
 using namespace Routes;
 
@@ -39,13 +48,32 @@ int main()
    }
    // -----------------------------------------------------------------------
 
+   // --- Boot service providers (Jobs, Events, ...) ------------------------
+   // Ordering matters: AppServiceProvider трябва да е първи, за да
+   // регистрира queue driver-ите преди JobServiceProvider да опита
+   // да ги ползва (макар че в Phase A register-фазата само пълни
+   // registry-та — реалният dispatch идва по-късно, при requests).
+   auto& kernel = Garvan::AppKernel::instance();
+   kernel.addProvider(std::make_unique<AppProviders::AppServiceProvider>());
+   kernel.addProvider(std::make_unique<AppProviders::JobServiceProvider>());
+   kernel.addProvider(std::make_unique<AppProviders::EventServiceProvider>());
+   kernel.bootAll();
+   // -----------------------------------------------------------------------
+
    crow::SimpleApp *app = new crow::SimpleApp();
    crow::mustache::set_global_base("public/");
 
-   ApiRoutes apiRoutes(*app);
-   WebRoutes webRoutes(*app);
+   ApiRoutes  apiRoutes(*app);
+   WebRoutes  webRoutes(*app);
+   JobRoute   jobRoute(*app);
+   EventRoute eventRoute(*app);
+   AdminRoute adminRoute(*app);
 
    app->port(9090)
        .multithreaded()
        .run();
+
+   // Graceful shutdown -- Phase B ще завърши background worker
+   // thread-овете тук.
+   kernel.shutdown();
 }
