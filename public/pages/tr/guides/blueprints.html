@@ -1,0 +1,21 @@
+<h1>Blueprints</h1>
+<p>Bir blueprint, URL prefix'i, template base'i veya static dizini paylaşan route'ların grubudur. Büyük bir app'i modüllere bölmek için kullanışlıdır &mdash; örneğin API sürümü başına bir blueprint.</p>
+
+<h2 id="creating">Bir blueprint oluşturma</h2>
+<pre><code class="language-cpp">crow::Blueprint api("api/v1", "static_v1", "templates_v1");
+
+CROW_BP_ROUTE(api, "/users")([] {
+    return "v1 users";
+});
+</code></pre>
+
+<h2 id="mounting">App'e monte etme</h2>
+<pre><code class="language-cpp">app.register_blueprint(api);
+</code></pre>
+
+<p>Blueprint'in prefix'i içindeki her route'un başına eklenir, bu nedenle yukarıdaki handler <code>GET /api/v1/users</code>'e yanıt verir.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/static"><span class="label">{{t_prev}}</span><span class="title">Statik dosyalar</span></a>
+    <a class="next" href="/guides/compression"><span class="label">{{t_next}}</span><span class="title">Sıkıştırma</span></a>
+</div>

@@ -4,16 +4,19 @@
 <h2 id="requirements">Requirements</h2>
 <ul>
     <li>Xcode command line tools (<code>xcode-select --install</code>).</li>
-    <li>A C++ compiler with C++20 support (the Apple Clang shipped with Xcode 14+ works).</li>
+    <li>A C++ compiler with <strong>C++23</strong> support (Xcode 16+ Apple Clang, or LLVM Clang 18+ from Homebrew).</li>
     <li>CMake 3.20 or later.</li>
     <li>Asio headers.</li>
+    <li>libcurl (bundled with macOS; Homebrew's <code>curl</code> is a newer option).</li>
 </ul>
 
 <h2 id="homebrew">Using Homebrew</h2>
 <p>The easiest path is via Homebrew. Install the build tools and any database drivers you need:</p>
 
-<pre><code class="language-bash">brew install cmake asio openssl@3
+<pre><code class="language-bash">brew install cmake asio openssl@3 curl
 brew install libpq mysql-connector-c++ mongo-cxx-driver sqlite
+# For C++23: install a newer toolchain if Apple Clang is too old
+brew install llvm@18
 </code></pre>
 
 <h2 id="compile-your-project">Compiling your project</h2>

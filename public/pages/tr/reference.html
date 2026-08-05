@@ -1,0 +1,26 @@
+<h1>API Referansı</h1>
+<p>Bu sayfa Garvan ve Crow için üretilen API referansına bağlantı verir. Framework <strong>C++23</strong> (GCC 14+ / Clang 18+) hedefler. Referans, kaynak ağacındaki header yorumlarından Doxygen tarafından üretilir.</p>
+
+<h2 id="about">Hakkında</h2>
+<p>Referans iki katmanı kapsar:</p>
+<ul>
+    <li><strong>Garvan</strong> &mdash; model/controller/service temel sınıfları, ORM builder, migration runner ve <code>vendors/Garvan/include/</code> altındaki yardımcılar.</li>
+    <li><strong>Crow</strong> &mdash; altta yatan HTTP sunucusu, router, JSON, mustache, multipart ve websocket alt sistemleri.</li>
+</ul>
+
+<h2 id="namespaces">Namespace'ler</h2>
+<ul>
+    <li><code>Garvan</code> &mdash; framework sınıfları (<code>BaseContoller</code>, <code>BaseService</code>, <code>Builder</code>, <code>Migration</code>, <code>MigrationRunner</code>).</li>
+    <li><code>ORM</code> &mdash; <code>OModel</code> temeli ve ilgili tipler.</li>
+    <li><code>crow</code> &mdash; upstream Crow'dan her şey: <code>SimpleApp</code>, <code>App&lt;...&gt;</code>, <code>request</code>, <code>response</code>, <code>json::rvalue</code>, <code>json::wvalue</code>, <code>mustache::template_t</code>.</li>
+</ul>
+
+<div class="admonition note">
+    <div class="admonition-title">Durum</div>
+    <p>Doxygen çıktısı henüz bu siteye bağlanmadı. O zamana kadar doğrudan <code>vendors/Garvan/include/</code> ve <code>vendors/Garvan/crow/</code>'daki header'lara başvurun.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/helpers"><span class="label">{{t_prev}}</span><span class="title">Yardımcılar</span></a>
+    <a class="next" href="/"><span class="label">{{t_next}}</span><span class="title">Ana sayfa</span></a>
+</div>

@@ -1,0 +1,48 @@
+<h1>JSON</h1>
+<p>Garvan lê JSON através de <code>crow::json::rvalue</code> e escreve-o através de <code>crow::json::wvalue</code>. Há também um wrapper fino <code>JsonValue</code> no diretório tools para uso fora de request handlers.</p>
+
+<h2 id="reading">Ler JSON</h2>
+<p>Faça parse do body de um pedido recebido e aceda a campos por chave:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/api/echo")
+    .methods("POST"_method)
+([](const crow::request &amp;req) {
+    auto body = crow::json::load(req.body);
+    if (!body) return crow::response(400, "invalid json");
+
+    std::string name = body["name"].s();
+    int         age  = body["age"].i();
+    return crow::response("hello " + name);
+});
+</code></pre>
+
+<p><code>load</code> devolve um valor falsy quando o parse falha, portanto verifique sempre antes de aceder a campos.</p>
+
+<h2 id="writing">Escrever JSON</h2>
+<p>Construa um <code>wvalue</code> e devolva-o; Garvan define <code>Content-Type: application/json</code> automaticamente.</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/api/user")([] {
+    crow::json::wvalue out;
+    out["id"]      = 42;
+    out["name"]    = "Ada";
+    out["roles"]   = crow::json::wvalue::list({ "admin", "editor" });
+    return out;
+});
+</code></pre>
+
+<h2 id="garvan-jsonvalue">JsonValue do Garvan</h2>
+<p><code>JsonValue</code> (alias <code>json</code> dentro dos route headers) é um wrapper fino que adiciona algumas conveniências para uso dentro de serviços. O <code>UserMysqlController</code> no starter incluído, por exemplo, devolve um <code>JsonValue</code> do seu método <code>index()</code>.</p>
+
+<pre><code class="language-cpp">#include "tools/JsonValue.h"
+using json = JsonValue;
+
+json users;
+users.append({ {"id", 1}, {"name", "Ada"} });
+users.append({ {"id", 2}, {"name", "Bo"} });
+return users;
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/logging"><span class="label">{{t_prev}}</span><span class="title">Registo</span></a>
+    <a class="next" href="/guides/templating"><span class="label">{{t_next}}</span><span class="title">Templates (Mustache)</span></a>
+</div>

@@ -1,0 +1,33 @@
+<h1>Serviço systemd</h1>
+<p>Para correr o seu binary Garvan no arranque, coloque um ficheiro unit do systemd em <code>/etc/systemd/system/</code> e ative-o.</p>
+
+<h2 id="unit-file">Ficheiro unit</h2>
+<pre><code class="language-bash">[Unit]
+Description=My Garvan app
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/srv/my-app
+ExecStart=/srv/my-app/bin/app.bin
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=/srv/my-app/.env
+
+[Install]
+WantedBy=multi-user.target
+</code></pre>
+
+<h2 id="enable">Ativar o serviço</h2>
+<pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl enable --now my-app.service
+sudo journalctl -u my-app.service -f
+</code></pre>
+
+<p>O último comando faz tail dos logs &mdash; útil enquanto está a configurar.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/proxies"><span class="label">{{t_prev}}</span><span class="title">Proxies</span></a>
+    <a class="next" href="/garvan/env"><span class="label">{{t_next}}</span><span class="title">Configuração .env</span></a>
+</div>

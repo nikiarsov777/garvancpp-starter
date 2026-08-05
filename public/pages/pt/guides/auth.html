@@ -1,0 +1,34 @@
+<h1>Autorização HTTP</h1>
+<p>A autenticação HTTP é feita através do header <code>Authorization</code>. Garvan não impõe um esquema; lê o header num middleware ou no próprio handler.</p>
+
+<h2 id="basic">Basic auth</h2>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/admin")([](const crow::request &amp;req) {
+    auto h = req.get_header_value("Authorization");
+    if (h.rfind("Basic ", 0) != 0) return crow::response(401);
+
+    std::string token = h.substr(6);
+    std::string raw   = crow::utility::base64decode(token, token.size());
+    // raw == "user:password"
+    if (raw != "admin:secret") return crow::response(403);
+
+    return crow::response("welcome");
+});
+</code></pre>
+
+<h2 id="bearer">Tokens Bearer</h2>
+<p>JWTs e tokens opacos parecem iguais no wire:</p>
+
+<pre><code class="language-cpp">if (h.rfind("Bearer ", 0) != 0) return crow::response(401);
+std::string jwt = h.substr(7);
+// verify the signature, check claims, etc.
+</code></pre>
+
+<div class="admonition tip">
+    <div class="admonition-title">Dica</div>
+    <p>Puxe a verificação para um middleware para não se repetir em cada handler. Ver o <a href="/guides/middleware">guia de middleware</a>.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/testing"><span class="label">{{t_prev}}</span><span class="title">Escrever testes</span></a>
+    <a class="next" href="/guides/included_middleware"><span class="label">{{t_next}}</span><span class="title">Middlewares incluídos</span></a>
+</div>

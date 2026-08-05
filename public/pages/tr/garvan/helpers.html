@@ -1,0 +1,31 @@
+<h1>Yardımcılar</h1>
+<p>Üç küçük yardımcı sınıf <code>vendors/Garvan/include/tools/</code> altında yaşar. Controller ve service yazarken onlarla karşılaşacaksınız.</p>
+
+<h2 id="helper">Helper</h2>
+<p><code>Helper</code> sınıfı hem <code>BaseContoller</code>'ın hem de <code>BaseService</code>'ın temelidir. Başka hiçbir yere sığmayan kolaylık metodları sağlar &mdash; tarih biçimlendirme, slug üretimi, response oluşturma.</p>
+
+<pre><code class="language-cpp">#include "tools/Helper.h"
+
+std::string slug = Helper::slug("Hello, World!"); // "hello-world"
+</code></pre>
+
+<h2 id="jsonvalue">JsonValue</h2>
+<p>İç içe nesneler ve diziler için yardımcılarla birlikte <code>crow::json::wvalue</code> üzerinde bir wrapper. Service ve controller metodlarının dönüş tipi olarak kullanın:</p>
+
+<pre><code class="language-cpp">#include "tools/JsonValue.h"
+using json = JsonValue;
+
+json out;
+out["status"] = "ok";
+out["data"]   = json::Array();
+out["data"].append({ {"id", 1}, {"name", "Ada"} });
+return out;
+</code></pre>
+
+<h2 id="logger">Logger</h2>
+<p><a href="/guides/logging">Günlükleme</a> sayfasında zaten kapsandı. Crow logger'ının erişilebilir olmadığı bir yerden bir şey loglamak istediğinizde kullanın.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/databases"><span class="label">{{t_prev}}</span><span class="title">Veritabanı sürücüleri</span></a>
+    <a class="next" href="/reference"><span class="label">{{t_next}}</span><span class="title">API Referansı</span></a>
+</div>

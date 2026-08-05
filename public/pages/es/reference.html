@@ -1,0 +1,26 @@
+<h1>Referencia de API</h1>
+<p>Esta página enlaza a la referencia de API generada para Garvan y Crow. El framework apunta a <strong>C++23</strong> (GCC 14+ / Clang 18+). La referencia se produce con Doxygen a partir de comentarios en los headers del árbol de código.</p>
+
+<h2 id="about">Acerca</h2>
+<p>La referencia cubre dos capas:</p>
+<ul>
+    <li><strong>Garvan</strong> &mdash; las clases base model/controller/service, el ORM builder, el migration runner y las utilidades bajo <code>vendors/Garvan/include/</code>.</li>
+    <li><strong>Crow</strong> &mdash; el servidor HTTP subyacente, router, JSON, mustache, multipart y subsistemas websocket.</li>
+</ul>
+
+<h2 id="namespaces">Namespaces</h2>
+<ul>
+    <li><code>Garvan</code> &mdash; clases del framework (<code>BaseContoller</code>, <code>BaseService</code>, <code>Builder</code>, <code>Migration</code>, <code>MigrationRunner</code>).</li>
+    <li><code>ORM</code> &mdash; la base <code>OModel</code> y tipos relacionados.</li>
+    <li><code>crow</code> &mdash; todo desde upstream Crow: <code>SimpleApp</code>, <code>App&lt;...&gt;</code>, <code>request</code>, <code>response</code>, <code>json::rvalue</code>, <code>json::wvalue</code>, <code>mustache::template_t</code>.</li>
+</ul>
+
+<div class="admonition note">
+    <div class="admonition-title">Estado</div>
+    <p>La salida de Doxygen aún no está conectada a este sitio. Mientras tanto, consulta directamente los headers en <code>vendors/Garvan/include/</code> y <code>vendors/Garvan/crow/</code>.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/helpers"><span class="label">{{t_prev}}</span><span class="title">Utilidades</span></a>
+    <a class="next" href="/"><span class="label">{{t_next}}</span><span class="title">Inicio</span></a>
+</div>

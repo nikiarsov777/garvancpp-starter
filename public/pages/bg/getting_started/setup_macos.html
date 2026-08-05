@@ -4,16 +4,19 @@
 <h2 id="requirements">Изисквания</h2>
 <ul>
     <li>Xcode command line tools (<code>xcode-select --install</code>).</li>
-    <li>C++ компилатор с поддръжка на C++20 (Apple Clang от Xcode 14+ работи).</li>
+    <li>C++ компилатор с поддръжка на <strong>C++23</strong> (Xcode 16+ Apple Clang или LLVM Clang 18+ от Homebrew).</li>
     <li>CMake 3.20 или по-нов.</li>
     <li>Asio header-и.</li>
+    <li>libcurl (идва с macOS; <code>curl</code> от Homebrew е по-нова опция).</li>
 </ul>
 
 <h2 id="homebrew">С Homebrew</h2>
 <p>Най-лесният път е през Homebrew. Инсталирайте инструментите за компилация и драйверите за нужните бази:</p>
 
-<pre><code class="language-bash">brew install cmake asio openssl@3
+<pre><code class="language-bash">brew install cmake asio openssl@3 curl
 brew install libpq mysql-connector-c++ mongo-cxx-driver sqlite
+# За C++23: инсталирайте по-нов toolchain ако Apple Clang е стар
+brew install llvm@18
 </code></pre>
 
 <h2 id="compile-your-project">Компилиране на проекта ви</h2>

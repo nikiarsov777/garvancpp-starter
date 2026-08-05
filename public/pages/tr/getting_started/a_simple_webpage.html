@@ -1,0 +1,64 @@
+<h1>Basit bir web sayfası</h1>
+<p>Düz bir string döndürmek testler için iyidir, ancak çoğu uygulamanın gerçek HTML'e ihtiyacı vardır. Garvan template için Crow'un mustache engine'ini kullanır &mdash; diskten bir sayfa render edelim.</p>
+
+<h2 id="static-page">Statik sayfa</h2>
+<p><code>public/fancypage.html</code> oluşturun:</p>
+
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;body&gt;
+    &lt;p&gt;Hello World!&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+<p>Şimdi mustache'a template'lerin nerede aranacağını söyleyin ve dosyayı bir handler'dan yükleyin:</p>
+
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+
+int main()
+{
+    crow::SimpleApp app;
+    crow::mustache::set_global_base("public/");
+
+    CROW_ROUTE(app, "/")([] {
+        return crow::mustache::load_text("fancypage.html");
+    });
+
+    app.port(9090).multithreaded().run();
+}
+</code></pre>
+
+<p><code>load_text</code> dosyayı mustache tag'lerini parse etmeden okur, bu yüzden tamamen statik HTML için en hızlı seçenektir.</p>
+
+<h2 id="with-variable">Değişkenli sayfa</h2>
+<p>Veri enjekte etmek için <code>load_text</code>'ten <code>load</code>'a geçin, bir context oluşturun ve render edin. Template'i güncelleyin:</p>
+
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;body&gt;
+    &lt;p&gt;Hello {{name}}!&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+<p>Ve route:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/&lt;string&gt;")([](std::string name) {
+    auto page = crow::mustache::load("fancypage.html");
+    crow::mustache::context ctx;
+    ctx["name"] = name;
+    return page.render(ctx);
+});
+</code></pre>
+
+<p><code>/Ada</code>'yı ziyaret etmek şimdi <em>Hello Ada!</em>'yı gösterecek. Context string'ler, sayılar, listeler ve hatta lambda'lar tutabilir &mdash; Crow'un implement ettiği tam mustache özellik kümesi için <a href="/guides/templating">templating kılavuzuna</a> bakın.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/getting_started/your_first_application">
+        <span class="label">{{t_prev}}</span><span class="title">İlk uygulamanız</span>
+    </a>
+    <a class="next" href="/guides/app">
+        <span class="label">{{t_next}}</span><span class="title">App</span>
+    </a>
+</div>

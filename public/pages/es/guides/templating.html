@@ -1,0 +1,68 @@
+<h1>Plantillas (Mustache)</h1>
+<p>Garvan expone la implementación mustache de Crow. El modelo es deliberadamente simple: un archivo de plantilla más un objeto context igual a HTML renderizado.</p>
+
+<h2 id="components">Componentes</h2>
+<p>Cada render involucra dos piezas:</p>
+<ul>
+    <li><strong>Page</strong> &mdash; un archivo en disco, cargado en un <code>crow::mustache::template_t</code>.</li>
+    <li><strong>Context</strong> &mdash; un <code>crow::mustache::context</code> (alias para <code>crow::json::wvalue</code>) que lleva los valores referenciados por los tags de la plantilla.</li>
+</ul>
+
+<h2 id="page">Page</h2>
+<p>Las plantillas viven bajo un directorio base. Establécelo una vez al arranque:</p>
+
+<pre><code class="language-cpp">crow::mustache::set_global_base("public/");
+</code></pre>
+
+<p>Luego carga archivos relativos a esa base:</p>
+
+<pre><code class="language-cpp">auto page = crow::mustache::load("welcome.html");
+auto text = crow::mustache::load_text("static_snippet.html"); // sin parseo
+</code></pre>
+
+<p>El loader sanitiza el path; si realmente necesitas saltártelo (normalmente no), usa <code>load_unsafe</code>.</p>
+
+<h2 id="context">Context</h2>
+<p>Construye un context con los datos que la página necesite:</p>
+
+<pre><code class="language-cpp">crow::mustache::context ctx;
+ctx["title"]   = "Welcome";
+ctx["user"]    = "Ada";
+ctx["items"]   = crow::json::wvalue::list({ "one", "two", "three" });
+ctx["greet"]   = [](std::string) { return std::string("Hello there!"); };
+</code></pre>
+
+<p>Se permiten lambdas y pueden ellas mismas devolver strings que contengan tags mustache &mdash; el engine sigue parseando.</p>
+
+<h2 id="partials">Parciales</h2>
+<p>Reutiliza fragmentos con la sintaxis <code>&#123;&#123;&gt; partial.html &#125;&#125;</code>. El path es de nuevo relativo al global base. El sitio de docs que estás leyendo usa parciales para el top nav, sidebar, TOC y footer.</p>
+
+<pre><code class="language-html">&lt;body&gt;
+    &#123;&#123;&gt; topnav.html &#125;&#125;
+    &lt;main&gt;&#123;&#123;&amp; content&#125;&#125;&lt;/main&gt;
+    &#123;&#123;&gt; footer.html &#125;&#125;
+&lt;/body&gt;
+</code></pre>
+
+<h2 id="returning">Devolver una plantilla</h2>
+<p>Renderiza la página con el context y devuelve el resultado:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/welcome/&lt;string&gt;")([](std::string name) {
+    auto page = crow::mustache::load("welcome.html");
+    crow::mustache::context ctx;
+    ctx["user"] = name;
+    return page.render(ctx);
+});
+</code></pre>
+
+<p><code>page.render(ctx)</code> devuelve un <code>crow::returnable</code> con <code>Content-Type</code> establecido a <code>text/html</code>. Usa <code>render_string(ctx)</code> si prefieres tener un <code>std::string</code> plano &mdash; por ejemplo cuando quieres embeber el resultado dentro de otra plantilla.</p>
+
+<div class="admonition tip">
+    <div class="admonition-title">Consejo</div>
+    <p>Si tu plantilla necesita incluir <code>&#123;&#123;</code> literales (por ejemplo un ejemplo de código para esta misma página), escápalos con las entidades HTML <code>&amp;#123;&amp;#123;</code>.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/json"><span class="label">{{t_prev}}</span><span class="title">JSON</span></a>
+    <a class="next" href="/guides/multipart"><span class="label">{{t_next}}</span><span class="title">Multipart</span></a>
+</div>

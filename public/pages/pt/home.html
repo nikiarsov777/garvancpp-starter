@@ -1,16 +1,120 @@
 <section class="home-hero">
     <img class="hero-logo" src="/static/img/garvan.png" alt="Garvan" />
     <h1>Garvan C++</h1>
-    <p class="lead">Um framework web C++ rápido e fácil de usar. O Garvan estende o Crow com um ORM, migrações, uma camada modelo/controlador/serviço e uma caixa de ferramentas de linha de comandos &mdash; para que possa entregar serviços HTTP e WebSocket sem sair do C++.</p>
+    <p class="lead">Um framework web <strong>C++23</strong> rápido e com tudo incluído. Garvan estende Crow com um ORM, migrações, event bus e job queue com um job SMTP real, camada de model/controller/service e o CLI <code>kalpasan</code> &mdash; para entregar serviços HTTP, WebSocket e trabalho em background sem sair de C++.</p>
     <div class="cta-row">
         <a class="btn-primary-garvan" href="/getting_started/setup_linux">Começar</a>
-        <a class="btn-outline-garvan" href="/guides/app">Guias</a>
+        <a class="btn-outline-garvan" href="/guides/app">Ler os guias</a>
+        <a class="btn-outline-garvan" href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
     </div>
 </section>
 
 <section class="feature-grid">
-    <div class="feature-card"><div class="icon">&#9889;</div><h3>Extremamente rápido</h3><p>Construído sobre o núcleo de alto desempenho do Crow.</p></div>
-    <div class="feature-card"><div class="icon">&#127760;</div><h3>Multi-base de dados</h3><p>PostgreSQL, MySQL, SQLite, MongoDB e MonetDB.</p></div>
-    <div class="feature-card"><div class="icon">&#128296;</div><h3>Tudo incluído</h3><p>Mustache, JSON, query builder, migrações, logger.</p></div>
-    <div class="feature-card"><div class="icon">&#128279;</div><h3>WebSockets</h3><p>Comunicação bidirecional em tempo real.</p></div>
+    <div class="feature-card">
+        <div class="icon">&#9889;</div>
+        <h3>Extremamente rápido</h3>
+        <p>Construído no core de alto desempenho do Crow &mdash; o routing é uma árvore de decisão compile-time.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon">&#127760;</div>
+        <h3>Multi-base de dados</h3>
+        <p>Drivers de primeira classe para PostgreSQL, MySQL, SQLite, MongoDB e MonetDB.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon">&#128296;</div>
+        <h3>Tudo incluído</h3>
+        <p>Templates Mustache, JSON, query builder, migrações, logger &mdash; já prontos.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon">&#128279;</div>
+        <h3>WebSockets</h3>
+        <p>Comunicação bidirecional em tempo real com o mesmo modelo de routing que HTTP.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon">&#128231;</div>
+        <h3>Events &amp; Jobs</h3>
+        <p>Fire eventos, dispatch jobs e envie mail HTML real por SMTP com libcurl &mdash; tudo in-process.</p>
+    </div>
+</section>
+
+<section class="code-feature">
+    <div>
+        <h2>A correr em 8 linhas</h2>
+        <p>Defina uma rota, devolva uma string, corra a app. Garvan sai do caminho.</p>
+    </div>
+    <pre><code class="language-cpp">#include "crow.h"
+
+int main()
+{
+    crow::SimpleApp app;
+
+    CROW_ROUTE(app, "/")([]{
+        return "Hello from Garvan!";
+    });
+
+    app.port(9090).multithreaded().run();
+}</code></pre>
+</section>
+
+<section class="code-feature reverse">
+    <pre><code class="language-cpp">CROW_ROUTE(app, "/api/users/&lt;int&gt;")
+([](int id) {
+    crow::json::wvalue user;
+    user["id"]    = id;
+    user["name"]  = "Ada";
+    user["email"] = "ada@example.com";
+    return user;
+});</code></pre>
+    <div>
+        <h2>JSON, o caminho fácil</h2>
+        <p>Devolva um <code>crow::json::wvalue</code> de um handler e o Garvan define o
+            <code>Content-Type</code> certo por si. O próprio <code>JsonValue</code> do Garvan
+            envolve as mesmas primitivas para uso dentro de services e modelos.</p>
+    </div>
+</section>
+
+<section class="code-feature">
+    <div>
+        <h2>Um ORM que parece familiar</h2>
+        <p>Um query builder fluente escreve o SQL para qualquer um dos backends suportados. Os modelos
+            estendem <code>OModel</code> e expõem <code>find()</code>, <code>where()</code> e
+            relações.</p>
+    </div>
+    <pre><code class="language-cpp">auto users = db.table("users")
+    .where("active", "=", 1)
+    .order_by("created_at", "desc")
+    .limit(20)
+    .get();</code></pre>
+</section>
+
+<section>
+    <h2 id="install">Instalar Garvan</h2>
+    <div class="packages-grid">
+        <a href="/getting_started/setup_linux">
+            <span class="pkg-name">Linux</span>
+            <span class="pkg-desc">apt, AUR ou build a partir do source</span>
+        </a>
+        <a href="/getting_started/setup_macos">
+            <span class="pkg-name">macOS</span>
+            <span class="pkg-desc">Homebrew ou build manual</span>
+        </a>
+        <a href="/getting_started/setup_windows">
+            <span class="pkg-name">Windows</span>
+            <span class="pkg-desc">vcpkg ou MSVC</span>
+        </a>
+        <a href="/getting_started/project_templates">
+            <span class="pkg-name">Modelos</span>
+            <span class="pkg-desc">Scaffolds de projeto starter</span>
+        </a>
+    </div>
+</section>
+
+<section style="text-align:center; margin: 56px 0 24px;">
+    <h2>Aprenda Garvan</h2>
+    <p>Comece com o guia de setup, depois construa o seu primeiro endpoint.</p>
+    <div class="cta-row" style="display:flex; gap:12px; justify-content:center; margin-top: 16px;">
+        <a class="btn-primary-garvan" href="/getting_started/your_first_application">Primeira aplicação</a>
+        <a class="btn-outline-garvan" href="/guides/app">Guias</a>
+        <a class="btn-outline-garvan" href="/reference">Referência da API</a>
+    </div>
 </section>

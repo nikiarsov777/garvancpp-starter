@@ -1,0 +1,31 @@
+<h1>Utilidades</h1>
+<p>Tres pequeñas clases utilitarias viven bajo <code>vendors/Garvan/include/tools/</code>. Te las encontrarás mientras escribes controllers y services.</p>
+
+<h2 id="helper">Helper</h2>
+<p>La clase <code>Helper</code> es la base tanto de <code>BaseContoller</code> como de <code>BaseService</code>. Proporciona métodos de conveniencia que no encajan en ningún otro lado &mdash; formateo de fechas, generación de slugs, construcción de respuestas.</p>
+
+<pre><code class="language-cpp">#include "tools/Helper.h"
+
+std::string slug = Helper::slug("Hello, World!"); // "hello-world"
+</code></pre>
+
+<h2 id="jsonvalue">JsonValue</h2>
+<p>Un wrapper sobre <code>crow::json::wvalue</code> con helpers para objetos y arrays anidados. Úsalo como tipo de retorno de los métodos de service y controller:</p>
+
+<pre><code class="language-cpp">#include "tools/JsonValue.h"
+using json = JsonValue;
+
+json out;
+out["status"] = "ok";
+out["data"]   = json::Array();
+out["data"].append({ {"id", 1}, {"name", "Ada"} });
+return out;
+</code></pre>
+
+<h2 id="logger">Logger</h2>
+<p>Ya cubierto en la página <a href="/guides/logging">Registro</a>. Úsalo cuando quieras loggear algo desde un lugar donde el logger de Crow no sea alcanzable.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/databases"><span class="label">{{t_prev}}</span><span class="title">Controladores de BD</span></a>
+    <a class="next" href="/reference"><span class="label">{{t_next}}</span><span class="title">Referencia de API</span></a>
+</div>

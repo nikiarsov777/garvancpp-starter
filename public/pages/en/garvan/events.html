@@ -1,0 +1,109 @@
+<h1>Events</h1>
+<p>Events let one part of your app notify others without knowing who is
+listening. Fire an event once; every registered listener runs — synchronously,
+in order of registration, in the same thread.</p>
+
+<h2 id="api">Event API</h2>
+<p>An event is a small value class derived from <code>Garvan::Event</code>:</p>
+
+<pre><code class="language-cpp">// app/events/UserRegistered.h
+#include "events/Event.h"
+#include "tools/JsonValue.h"
+
+namespace AppEvents {
+
+class UserRegistered : public Garvan::Event
+{
+public:
+    UserRegistered() = default;
+    UserRegistered(int id, std::string mail, std::string person)
+        : user_id(id), email(std::move(mail)), name(std::move(person)) {}
+
+    std::string eventName() const override { return "UserRegistered"; }
+
+    Garvan::JsonValue payload() const override;
+    static std::unique_ptr&lt;Garvan::Event&gt;
+        fromPayload(const Garvan::JsonValue&amp; p);
+
+    int         user_id{};
+    std::string email;
+    std::string name;
+};
+
+} // namespace AppEvents
+</code></pre>
+
+<h2 id="listener">Writing a listener</h2>
+<p>Derive from <code>Garvan::Listener&lt;YourEvent&gt;</code> and implement
+<code>handle()</code>:</p>
+
+<pre><code class="language-cpp">// app/listeners/SendWelcomeEmailListener.h
+#include "events/Listener.h"
+#include "../events/UserRegistered.h"
+
+class SendWelcomeEmailListener
+    : public Garvan::Listener&lt;AppEvents::UserRegistered&gt;
+{
+public:
+    void handle(const AppEvents::UserRegistered&amp; event) override;
+};
+</code></pre>
+
+<p>The listener body can do anything — write to the database, call a service,
+or dispatch a job (which is exactly what
+<code>SendWelcomeEmailListener</code> does, forwarding to
+<code>AppJobs::SendTestMail</code>).</p>
+
+<h2 id="dispatcher">Firing events</h2>
+<pre><code class="language-cpp">#include "events/EventDispatcher.h"
+#include "app/events/UserRegistered.h"
+
+Garvan::EventDispatcher::fire(
+    std::make_unique&lt;AppEvents::UserRegistered&gt;(42, "u@x.com", "Ada"));
+</code></pre>
+
+<p>Listeners are called synchronously in the same thread; if one throws,
+subsequent listeners are still executed and <code>fire()</code> re-raises the
+first exception at the end.</p>
+
+<h2 id="provider">Registering in a service provider</h2>
+<p>Two registrations happen in <code>EventServiceProvider::register_()</code>:</p>
+
+<pre><code class="language-cpp">// app/providers/EventServiceProvider.cpp
+Garvan::EventDispatcher::listen&lt;AppEvents::UserRegistered,
+                                LogRegistrationListener&gt;();
+Garvan::EventDispatcher::listen&lt;AppEvents::UserRegistered,
+                                SendWelcomeEmailListener&gt;();
+
+// Optional: register the event's factory for admin-API `event:fire`
+GARVAN_REGISTER_EVENT(AppEvents::UserRegistered);
+</code></pre>
+
+<p><em>Unlike</em> <code>GARVAN_REGISTER_JOB</code>, the event macro is fine:
+the event's dispatch key is taken from <code>eventName()</code> at runtime,
+not from the stringified type name.</p>
+
+<p>Providers are booted in <code>main.cpp:56-60</code> in a fixed order —
+<code>AppServiceProvider</code> first (queue drivers), then
+<code>JobServiceProvider</code>, then <code>EventServiceProvider</code>.
+Listeners can safely dispatch jobs at boot time because jobs are already
+registered.</p>
+
+<h2 id="example">Example: UserRegistered chain</h2>
+<pre>
+GET /api/events/user-registered?email=...&amp;name=...&amp;id=...
+  → EventDispatcher::fire(UserRegistered)
+      → LogRegistrationListener::handle()      (sync log line)
+      → SendWelcomeEmailListener::handle()
+           → JobDispatcher::dispatch(SendTestMail)
+                → SyncDriver (inline)
+                     → SendTestMail::handle()  (libcurl SMTP send)
+</pre>
+
+<p>See <a href="/guides/events_and_jobs">Events &amp; Jobs walkthrough</a> for
+an end-to-end curl-and-verify tour.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/jobs"><span class="label">{{t_prev}}</span><span class="title">Jobs</span></a>
+    <a class="next" href="/garvan/mail"><span class="label">{{t_next}}</span><span class="title">Mail (SMTP)</span></a>
+</div>

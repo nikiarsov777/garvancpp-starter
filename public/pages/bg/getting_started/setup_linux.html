@@ -3,10 +3,11 @@
 
 <h2 id="requirements">Изисквания</h2>
 <ul>
-    <li>C++ компилатор с поддръжка на C++20 (GCC 11+ или Clang 12+).</li>
+    <li>C++ компилатор с поддръжка на <strong>C++23</strong> (GCC 14+ или Clang 18+).</li>
     <li>CMake 3.20 или по-нов.</li>
     <li>Asio header-и за разработка (1.28 или по-нови).</li>
     <li><code>libpq</code>, <code>libmysqlcppconn</code>, <code>libmongoc</code>, <code>libsqlite3</code>, <code>libmonetdb-mapi</code></li>
+    <li><code>libcurl</code> &mdash; SMTP транспорт за <code>AppJobs::SendTestMail</code>; ползва се и от <code>kalpasan</code> runtime verbs.</li>
     <li>По избор: OpenSSL за HTTPS, zlib за компресия.</li>
 </ul>
 
@@ -28,9 +29,18 @@ cd my-app
 sudo apt install -y \
     build-essential cmake \
     libasio-dev libssl-dev zlib1g-dev \
+    libcurl4-openssl-dev \
     libpqxx-dev libmysqlcppconn-dev libsqlite3-dev \
     libmongoc-dev libbson-dev
 </code></pre>
+
+<div class="admonition note">
+    <div class="admonition-title">libcurl auto-linked</div>
+    <p><code>CMakeLists.txt</code> на starter-a прихваща libcurl през
+    <code>find_package(CURL REQUIRED)</code> и линква
+    <code>CURL::libcurl</code> в <code>app_bin</code>. Не се изисква ръчна
+    конфигурация след като пакетът е инсталиран.</p>
+</div>
 
 <h2 id="build-from-source">Компилиране от изходен код</h2>
 <p>Ако искате да компилирате самия Garvan (вместо да ползвате готовия архив), клонирайте дървото на изходния код и пуснете CMake:</p>
@@ -47,7 +57,7 @@ sudo cmake --install build
 
 <pre><code class="language-cmake">cmake_minimum_required(VERSION 3.20)
 project(MyApp CXX)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 add_executable(my_app main.cpp)
 

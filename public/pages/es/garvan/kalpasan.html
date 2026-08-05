@@ -1,0 +1,72 @@
+<h1>Kalpasan CLI</h1>
+<p><code>kalpasan</code> es el compañero de línea de comandos del proyecto.
+Scaffold-ea modelos, controllers y services, ejecuta migraciones y seeders,
+e inicia un servidor de desarrollo con file watching.</p>
+
+<h2 id="install">Instalación</h2>
+<p>El binary vive en <code>vendors/Garvan/kalpasan</code>. Un symlink en la
+raíz del proyecto hace conveniente su llamada:</p>
+
+<pre><code class="language-bash">ln -s vendors/Garvan/kalpasan kalpasan
+./kalpasan --help
+</code></pre>
+
+<h2 id="commands">Scaffolding y comandos de BD</h2>
+<pre><code class="language-bash">./kalpasan make:model User           # scaffold app/models/User.{h,cpp}
+./kalpasan make:controller User      # scaffold app/controllers/UserController.{h,cpp}
+./kalpasan make:service User         # scaffold app/services/UserService.{h,cpp}
+./kalpasan make:migration create_users
+
+./kalpasan db:migrate                # delega a garvan-migrate up
+./kalpasan db:rollback               # delega a garvan-migrate down
+./kalpasan db:seed                   # ejecuta archivos en db/seeders/
+
+./kalpasan serve --watch             # rebuild + restart al cambiar .cpp/.h
+</code></pre>
+
+<p>Todos los comandos respetan el <code>.env</code> activo, así que apuntan a la BD correcta.</p>
+
+<h2 id="runtime-verbs">Runtime verbs (jobs, events, config)</h2>
+<p>Estos verbs hablan con una app <em>corriendo</em> vía HTTP (libcurl). Leen
+<code>KALPASAN_ADMIN_URL</code> (default
+<code>http://127.0.0.1:9090</code>) y <code>KALPASAN_ADMIN_TOKEN</code> de
+<code>.env</code>, luego pegan los endpoints admin bearer-guarded en
+<code>routes/AdminRoute.cpp</code>.</p>
+
+<pre><code class="language-bash">./kalpasan job:list                                # GET /api/admin/jobs
+./kalpasan job:dispatch SendTestMail \              # POST /api/admin/jobs/dispatch
+    --field to=you@x.com \
+    --field subject="Hi" \
+    --field body="&lt;h1&gt;Hello&lt;/h1&gt;"
+
+./kalpasan event:list                              # GET /api/admin/events
+./kalpasan event:fire UserRegistered \             # POST /api/admin/events/fire
+    --field id=42 \
+    --field email=you@x.com \
+    --field name="Ada"
+
+./kalpasan route:list                              # imprime HTTP routes
+./kalpasan config:show                             # dump .env
+./kalpasan config:get MAIL_HOST                    # lee una clave
+./kalpasan config:set MAIL_HOST smtp.new.com       # reescribe una clave
+./kalpasan config:key:generate                     # nuevo APP_KEY (base64 32-byte)
+</code></pre>
+
+<div class="admonition note">
+    <div class="admonition-title">Admin auth guard</div>
+    <p><code>AdminRoute</code> rechaza la petición si no se cumplen tres
+    condiciones: <code>KALPASAN_ADMIN_TOKEN</code> no vacío en
+    <code>.env</code>, la petición viene de loopback
+    (<code>127.0.0.1</code> o <code>::1</code>), y el header
+    <code>Authorization: Bearer &lt;token&gt;</code> coincide. De lo
+    contrario devuelve un JSON error con estado 401 / 403 / 503 (ver
+    <code>routes/AdminRoute.cpp:55-82</code>).</p>
+</div>
+
+<p>Ver <a href="/garvan/jobs">Jobs</a>, <a href="/garvan/events">Eventos</a>
+y <a href="/guides/events_and_jobs">Events &amp; Jobs recorrido</a>.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/migrations"><span class="label">{{t_prev}}</span><span class="title">Migraciones</span></a>
+    <a class="next" href="/garvan/jobs"><span class="label">{{t_next}}</span><span class="title">Jobs</span></a>
+</div>

@@ -1,0 +1,106 @@
+<h1>Mail (SMTP)</h1>
+<p>The starter ships one real, sendable job:
+<code>AppJobs::SendTestMail</code>. Its <code>handle()</code>
+(<code>app/jobs/SendTestMail.cpp:58</code>) opens an SMTP session with
+libcurl, builds an RFC 822 message with an HTML body, authenticates, sends,
+and logs the result. Everything is driven by the <code>MAIL_*</code> block in
+<code>.env</code>.</p>
+
+<h2 id="config">MAIL_* configuration</h2>
+<pre><code class="language-dotenv">MAIL_DRIVER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=465
+MAIL_USERNAME="user@example.com"
+MAIL_PASSWORD="app-password"
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="user@example.com"
+MAIL_FROM_NAME="Your App"
+MAIL_AUTHENTICATION=plain
+</code></pre>
+
+<table>
+    <thead><tr><th>Key</th><th>Purpose</th></tr></thead>
+    <tbody>
+        <tr><td><code>MAIL_HOST</code>, <code>MAIL_PORT</code></td><td>SMTP endpoint.</td></tr>
+        <tr><td><code>MAIL_USERNAME</code>, <code>MAIL_PASSWORD</code></td><td>Login credentials (libcurl auto-negotiates AUTH mechanism).</td></tr>
+        <tr><td><code>MAIL_ENCRYPTION</code></td><td><code>tls</code>, <code>ssl</code>, or <code>smtps</code>. <code>ssl</code>/<code>smtps</code> force implicit TLS regardless of port.</td></tr>
+        <tr><td><code>MAIL_FROM_ADDRESS</code>, <code>MAIL_FROM_NAME</code></td><td>Envelope sender + <code>From:</code> header display name.</td></tr>
+        <tr><td><code>MAIL_AUTHENTICATION</code></td><td>Informational; libcurl auto-negotiates.</td></tr>
+    </tbody>
+</table>
+
+<p>Values may be quoted with <code>"..."</code>; the job strips surrounding
+quotes before use.</p>
+
+<h2 id="ports">Ports &amp; encryption</h2>
+<ul>
+    <li><strong>465</strong> → implicit TLS (<code>smtps://</code>). Handshake happens before SMTP banner.</li>
+    <li><strong>587</strong> → STARTTLS. The job uses <code>smtp://</code> and forces TLS via <code>CURLUSESSL_ALL</code>.</li>
+    <li>Any other port with <code>MAIL_ENCRYPTION=ssl</code> or <code>smtps</code> → forced implicit TLS.</li>
+</ul>
+
+<h2 id="html">HTML content</h2>
+<p>The RFC 822 message header is fixed to
+<code>Content-Type: text/html; charset=UTF-8</code> with 8-bit CTE, so the
+<code>body</code> field can contain arbitrary HTML including UTF-8 text:</p>
+
+<pre><code class="language-bash">curl "http://localhost:9090/api/jobs/send-mail?to=you@x.com&amp;subject=Hi&amp;body=&lt;h1&gt;Hello&lt;/h1&gt;&lt;p&gt;&lt;b&gt;Bold&lt;/b&gt;&lt;/p&gt;"
+</code></pre>
+
+<h2 id="debug">Debugging the SMTP dialog</h2>
+<p>If a send succeeds according to libcurl but never lands in the inbox
+(spam, greylist, silent rejection), flip verbose mode on temporarily:</p>
+
+<pre><code class="language-cpp">// app/jobs/SendTestMail.cpp
+curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);   // change 0L to 1L
+</code></pre>
+
+<p>Rebuild, restart, retry. You get the full TLS handshake plus the SMTP
+dialog on the server's stdout — <code>EHLO</code>, <code>AUTH</code>,
+<code>MAIL FROM</code>, <code>RCPT TO</code>, <code>DATA</code>, and the
+final <code>250 2.0.0 Ok: queued as ...</code>.</p>
+
+<div class="admonition warning">
+    <div class="admonition-title">Do not commit the change</div>
+    <p>Verbose SMTP logs leak sensitive headers and can hurt performance.
+    Flip back to <code>0L</code> before committing.</p>
+</div>
+
+<h2 id="providers">Provider examples</h2>
+
+<p><strong>Gmail (app password, port 465):</strong></p>
+<pre><code class="language-dotenv">MAIL_HOST=smtp.gmail.com
+MAIL_PORT=465
+MAIL_USERNAME=you@gmail.com
+MAIL_PASSWORD=xxxx-xxxx-xxxx-xxxx    # app password, not your account password
+MAIL_ENCRYPTION=ssl
+MAIL_FROM_ADDRESS=you@gmail.com
+</code></pre>
+
+<p><strong>SendGrid (API relay, port 587 STARTTLS):</strong></p>
+<pre><code class="language-dotenv">MAIL_HOST=smtp.sendgrid.net
+MAIL_PORT=587
+MAIL_USERNAME=apikey
+MAIL_PASSWORD=SG.xxxxxxxxxxxxxxxxxxxxxxxx
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=you@yourdomain.com
+</code></pre>
+
+<p><strong>Custom SMTP (port 465):</strong></p>
+<pre><code class="language-dotenv">MAIL_HOST=mail.your-host.com
+MAIL_PORT=465
+MAIL_USERNAME=info@yourdomain.com
+MAIL_PASSWORD=your-mailbox-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=info@yourdomain.com
+MAIL_FROM_NAME="Your Brand"
+</code></pre>
+
+<p>See <a href="/garvan/jobs">Jobs</a> for the job pipeline itself, and
+<a href="/guides/events_and_jobs">Events &amp; Jobs walkthrough</a> for an
+end-to-end example.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/events"><span class="label">{{t_prev}}</span><span class="title">Events</span></a>
+    <a class="next" href="/garvan/databases"><span class="label">{{t_next}}</span><span class="title">Database drivers</span></a>
+</div>

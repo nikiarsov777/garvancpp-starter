@@ -3,10 +3,11 @@
 
 <h2 id="requirements">Requirements</h2>
 <ul>
-    <li>A C++ compiler with C++20 support (GCC 11+ or Clang 12+).</li>
+    <li>A C++ compiler with <strong>C++23</strong> support (GCC 14+ or Clang 18+).</li>
     <li>CMake 3.20 or later.</li>
     <li>Asio development headers (1.28 or later).</li>
     <li><code>libpq</code>, <code>libmysqlcppconn</code>, <code>libmongoc</code>, <code>libsqlite3</code>, <code>libmonetdb-mapi</code></li>
+    <li><code>libcurl</code> &mdash; SMTP transport for <code>AppJobs::SendTestMail</code>; also used by <code>kalpasan</code> runtime verbs.</li>
     <li>Optional: OpenSSL for HTTPS, zlib for compression.</li>
 </ul>
 
@@ -28,9 +29,18 @@ cd my-app
 sudo apt install -y \
     build-essential cmake \
     libasio-dev libssl-dev zlib1g-dev \
+    libcurl4-openssl-dev \
     libpqxx-dev libmysqlcppconn-dev libsqlite3-dev \
     libmongoc-dev libbson-dev
 </code></pre>
+
+<div class="admonition note">
+    <div class="admonition-title">libcurl auto-linked</div>
+    <p>The starter's <code>CMakeLists.txt</code> picks libcurl up via
+    <code>find_package(CURL REQUIRED)</code> and links
+    <code>CURL::libcurl</code> into <code>app_bin</code>. No manual
+    configuration needed once the package is installed.</p>
+</div>
 
 <h2 id="build-from-source">Building from source</h2>
 <p>If you want to build Garvan itself (rather than use the bundled archive), clone the source tree and run CMake:</p>
@@ -47,7 +57,7 @@ sudo cmake --install build
 
 <pre><code class="language-cmake">cmake_minimum_required(VERSION 3.20)
 project(MyApp CXX)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 add_executable(my_app main.cpp)
 

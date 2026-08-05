@@ -1,0 +1,88 @@
+<h1>Jobs</h1>
+<p>Jobs — это единицы фоновой работы. Каждый job является C++ классом, наследующим
+<code>Garvan::Job</code>. Их можно запускать напрямую, из event listener или
+через admin HTTP API (именно так работает <code>kalpasan job:dispatch</code>
+внутри).</p>
+
+<h2 id="api">Job API</h2>
+<p>Переопределите четыре метода и предоставьте одну статическую фабрику:</p>
+
+<pre><code class="language-cpp">// app/jobs/MyJob.h
+#include "queue/Job.h"
+#include "tools/JsonValue.h"
+
+namespace AppJobs {
+
+class MyJob : public Garvan::Job
+{
+public:
+    MyJob() = default;
+    MyJob(std::string arg) : arg_(std::move(arg)) {}
+
+    void handle() override;                                 // выполняет работу
+    std::string jobName() const override { return "MyJob"; }
+    std::string connection() const override { return "sync"; } // sync | async | database
+
+    Garvan::JsonValue payload() const override;             // сериализация для persistent queue
+    static std::unique_ptr&lt;Garvan::Job&gt;
+        fromPayload(const Garvan::JsonValue&amp; p);            // обратное к payload()
+
+private:
+    std::string arg_;
+};
+
+} // namespace AppJobs
+</code></pre>
+
+<h2 id="registry">Регистрация job</h2>
+<p>Регистрируйте каждый пользовательский job в
+<code>JobServiceProvider::register_()</code>. Используйте
+<code>JobRegistry::bind()</code> напрямую с коротким именем из
+<code>jobName()</code>:</p>
+
+<pre><code class="language-cpp">// app/providers/JobServiceProvider.cpp
+Garvan::JobRegistry::bind("MyJob", &amp;AppJobs::MyJob::fromPayload);
+</code></pre>
+
+<div class="admonition warning">
+    <div class="admonition-title">Не используйте <code>GARVAN_REGISTER_JOB</code> для пользовательских jobs</div>
+    <p>Макрос <code>GARVAN_REGISTER_JOB(AppJobs::MyJob)</code> stringify-ит весь
+    токен и регистрирует ключ как <code>"AppJobs::MyJob"</code>, что не
+    совпадает с <code>jobName()</code> или коротким именем, которое ожидает
+    <code>kalpasan job:dispatch</code>. См. исправление в
+    <code>app/providers/JobServiceProvider.cpp:18</code>.</p>
+</div>
+
+<h2 id="dispatcher">Dispatch</h2>
+<p>Из любого места кода — controller, listener или другой job:</p>
+
+<pre><code class="language-cpp">#include "queue/JobDispatcher.h"
+#include "app/jobs/MyJob.h"
+
+Garvan::JobDispatcher::dispatch(std::make_unique&lt;AppJobs::MyJob&gt;("hello"));
+</code></pre>
+
+<p>Dispatcher маршрутизирует job к драйверу, указанному в
+<code>job-&gt;connection()</code>. Драйверы связываются service provider-ами;
+в starter сегодня подключён только <code>"sync"</code>.</p>
+
+<h2 id="sync-driver">SyncDriver</h2>
+<p><code>SyncDriver</code> выполняет job inline в вызывающем потоке. Это
+default в Phase A и даёт call-and-return семантику как у обычной функции —
+идеально для тестов, low-throughput задач или pipeline-ов, запускаемых HTTP
+запросом. Async и database драйверы подключатся к тому же
+<code>JobDispatcher</code> API в следующих фазах без изменений в ваших
+job-классах.</p>
+
+<h2 id="example">Пример: SendTestMail</h2>
+<p>Встроенный <code>AppJobs::SendTestMail</code>
+(<code>app/jobs/SendTestMail.h:21</code>) — реальный, отправляющий job. Его
+<code>handle()</code> открывает SMTP сессию с libcurl, отправляет HTML email
+используя блок <code>MAIL_*</code> из <code>.env</code> и логирует результат
+в stdout. См. <a href="/garvan/mail">Mail (SMTP)</a> для SMTP части и
+<a href="/garvan/kalpasan">Kalpasan CLI</a> для verb <code>job:dispatch</code>.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/kalpasan"><span class="label">{{t_prev}}</span><span class="title">Kalpasan CLI</span></a>
+    <a class="next" href="/garvan/events"><span class="label">{{t_next}}</span><span class="title">События</span></a>
+</div>

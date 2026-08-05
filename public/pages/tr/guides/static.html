@@ -1,0 +1,26 @@
+<h1>Statik dosyalar</h1>
+<p>Crow, projenizin <code>static/</code> dizini altındaki herhangi bir dosyayı sunan <code>/static/&lt;path&gt;</code>'de bir route kaydeder. Garvan bunu ücretsiz miras alır.</p>
+
+<h2 id="default">Varsayılan static handler</h2>
+<p>Asset'leri <code>static/css/</code>, <code>static/js/</code> veya <code>static/img/</code>'a bırakın ve şablonlarınızda onlara referans verin:</p>
+
+<pre><code class="language-html">&lt;link rel="stylesheet" href="/static/css/app.css"&gt;
+&lt;script src="/static/js/bootstrap.min.js"&gt;&lt;/script&gt;
+&lt;img src="/static/img/logo.png"&gt;
+</code></pre>
+
+<p>Handler dosya uzantısına dayalı doğru bir <code>Content-Type</code> ayarlar ve <code>Range</code> isteklerini destekler.</p>
+
+<h2 id="customizing">Özelleştirme</h2>
+<p>Dizin ve URL prefix'i <code>vendors/Garvan/crow/settings.h</code>'de compile-time macro'ları olarak tanımlanır:</p>
+
+<pre><code class="language-cpp">#define CROW_STATIC_DIRECTORY "static/"
+#define CROW_STATIC_ENDPOINT  "/static/&lt;path&gt;"
+</code></pre>
+
+<p>Farklı defaults'a ihtiyacınız varsa <code>crow.h</code>'yi include etmeden önce onları override edin. Blueprint başına static dizinler için <a href="/guides/blueprints">Blueprints</a>'e bakın.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/ssl"><span class="label">{{t_prev}}</span><span class="title">SSL</span></a>
+    <a class="next" href="/guides/blueprints"><span class="label">{{t_next}}</span><span class="title">Blueprints</span></a>
+</div>

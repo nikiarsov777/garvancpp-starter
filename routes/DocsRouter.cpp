@@ -32,29 +32,33 @@ namespace Routes
             {"t_nav_garvan",          {{"en", "Garvan"},          {"bg", "Гарван"},        {"ru", "Гарван"},      {"es", "Garvan"},        {"tr", "Garvan"},      {"pt", "Garvan"}}},
             {"t_nav_reference",       {{"en", "API Reference"},   {"bg", "API справка"},   {"ru", "Справочник API"}, {"es", "Referencia API"}, {"tr", "API Referansı"}, {"pt", "Referência da API"}}},
 
-            {"t_side_project_templates", {{"en", "Project templates"}, {"bg", "Шаблони за проекти"}}},
-            {"t_side_first_app",         {{"en", "Your first application"}, {"bg", "Вашето първо приложение"}}},
-            {"t_side_simple_webpage",    {{"en", "A simple webpage"}, {"bg", "Проста уеб страница"}}},
-            {"t_side_routes",            {{"en", "Routes"}, {"bg", "Маршрути"}}},
-            {"t_side_logging",           {{"en", "Logging"}, {"bg", "Логиране"}}},
-            {"t_side_templating",        {{"en", "Templating (Mustache)"}, {"bg", "Шаблони (Mustache)"}}},
-            {"t_side_query_string",      {{"en", "Query strings"}, {"bg", "Параметри в URL"}}},
-            {"t_side_static",            {{"en", "Static files"}, {"bg", "Статични файлове"}}},
-            {"t_side_compression",       {{"en", "Compression"}, {"bg", "Компресия"}}},
-            {"t_side_testing",           {{"en", "Writing tests"}, {"bg", "Тестване"}}},
-            {"t_side_auth",              {{"en", "HTTP authorization"}, {"bg", "HTTP оторизация"}}},
-            {"t_side_included_mw",       {{"en", "Included middlewares"}, {"bg", "Вградени middleware-и"}}},
-            {"t_side_proxies",           {{"en", "Proxies"}, {"bg", "Прокси сървъри"}}},
+            {"t_side_project_templates", {{"en", "Project templates"}, {"bg", "Шаблони за проекти"}, {"ru", "Шаблоны проектов"}, {"es", "Plantillas de proyecto"}, {"tr", "Proje şablonları"}, {"pt", "Modelos de projeto"}}},
+            {"t_side_first_app",         {{"en", "Your first application"}, {"bg", "Вашето първо приложение"}, {"ru", "Ваше первое приложение"}, {"es", "Tu primera aplicación"}, {"tr", "İlk uygulamanız"}, {"pt", "A sua primeira aplicação"}}},
+            {"t_side_simple_webpage",    {{"en", "A simple webpage"}, {"bg", "Проста уеб страница"}, {"ru", "Простая веб-страница"}, {"es", "Una página web simple"}, {"tr", "Basit bir web sayfası"}, {"pt", "Uma página web simples"}}},
+            {"t_side_routes",            {{"en", "Routes"}, {"bg", "Маршрути"}, {"ru", "Маршруты"}, {"es", "Rutas"}, {"tr", "Rotalar"}, {"pt", "Rotas"}}},
+            {"t_side_logging",           {{"en", "Logging"}, {"bg", "Логиране"}, {"ru", "Логирование"}, {"es", "Registro"}, {"tr", "Günlükleme"}, {"pt", "Registo"}}},
+            {"t_side_templating",        {{"en", "Templating (Mustache)"}, {"bg", "Шаблони (Mustache)"}, {"ru", "Шаблоны (Mustache)"}, {"es", "Plantillas (Mustache)"}, {"tr", "Şablonlar (Mustache)"}, {"pt", "Templates (Mustache)"}}},
+            {"t_side_query_string",      {{"en", "Query strings"}, {"bg", "Параметри в URL"}, {"ru", "Параметры URL"}, {"es", "Cadenas de consulta"}, {"tr", "Sorgu dizeleri"}, {"pt", "Strings de consulta"}}},
+            {"t_side_static",            {{"en", "Static files"}, {"bg", "Статични файлове"}, {"ru", "Статические файлы"}, {"es", "Archivos estáticos"}, {"tr", "Statik dosyalar"}, {"pt", "Ficheiros estáticos"}}},
+            {"t_side_compression",       {{"en", "Compression"}, {"bg", "Компресия"}, {"ru", "Сжатие"}, {"es", "Compresión"}, {"tr", "Sıkıştırma"}, {"pt", "Compressão"}}},
+            {"t_side_testing",           {{"en", "Writing tests"}, {"bg", "Тестване"}, {"ru", "Написание тестов"}, {"es", "Escribir pruebas"}, {"tr", "Test yazma"}, {"pt", "Escrever testes"}}},
+            {"t_side_auth",              {{"en", "HTTP authorization"}, {"bg", "HTTP оторизация"}, {"ru", "HTTP авторизация"}, {"es", "Autorización HTTP"}, {"tr", "HTTP yetkilendirme"}, {"pt", "Autorização HTTP"}}},
+            {"t_side_included_mw",       {{"en", "Included middlewares"}, {"bg", "Вградени middleware-и"}, {"ru", "Встроенные middleware"}, {"es", "Middlewares incluidos"}, {"tr", "Dahili middleware'ler"}, {"pt", "Middlewares incluídos"}}},
+            {"t_side_proxies",           {{"en", "Proxies"}, {"bg", "Прокси сървъри"}, {"ru", "Прокси-серверы"}, {"es", "Proxies"}, {"tr", "Proxy sunucular"}, {"pt", "Proxies"}}},
 
-            {"t_side_env",         {{"en", ".env configuration"}, {"bg", ".env конфигурация"}}},
-            {"t_side_orm",         {{"en", "ORM / Query Builder"}, {"bg", "ORM / Query Builder"}}},
-            {"t_side_models",      {{"en", "Models"}, {"bg", "Модели"}}},
-            {"t_side_controllers", {{"en", "Controllers"}, {"bg", "Контролери"}}},
-            {"t_side_services",    {{"en", "Services"}, {"bg", "Услуги"}}},
-            {"t_side_migrations",  {{"en", "Migrations"}, {"bg", "Миграции"}}},
-            {"t_side_databases",   {{"en", "Database drivers"}, {"bg", "Драйвери за бази данни"}}},
-            {"t_side_helpers",     {{"en", "Helpers"}, {"bg", "Помощни инструменти"}}},
-            {"t_side_api_index",   {{"en", "API index"}, {"bg", "API индекс"}}},
+            {"t_side_env",         {{"en", ".env configuration"}, {"bg", ".env конфигурация"}, {"ru", "Конфигурация .env"}, {"es", "Configuración .env"}, {"tr", ".env yapılandırması"}, {"pt", "Configuração .env"}}},
+            {"t_side_orm",         {{"en", "ORM / Query Builder"}, {"bg", "ORM / Query Builder"}, {"ru", "ORM / Query Builder"}, {"es", "ORM / Query Builder"}, {"tr", "ORM / Query Builder"}, {"pt", "ORM / Query Builder"}}},
+            {"t_side_models",      {{"en", "Models"}, {"bg", "Модели"}, {"ru", "Модели"}, {"es", "Modelos"}, {"tr", "Modeller"}, {"pt", "Modelos"}}},
+            {"t_side_controllers", {{"en", "Controllers"}, {"bg", "Контролери"}, {"ru", "Контроллеры"}, {"es", "Controladores"}, {"tr", "Kontrolcüler"}, {"pt", "Controladores"}}},
+            {"t_side_services",    {{"en", "Services"}, {"bg", "Услуги"}, {"ru", "Сервисы"}, {"es", "Servicios"}, {"tr", "Servisler"}, {"pt", "Serviços"}}},
+            {"t_side_migrations",  {{"en", "Migrations"}, {"bg", "Миграции"}, {"ru", "Миграции"}, {"es", "Migraciones"}, {"tr", "Göçler"}, {"pt", "Migrações"}}},
+            {"t_side_databases",   {{"en", "Database drivers"}, {"bg", "Драйвери за бази данни"}, {"ru", "Драйверы БД"}, {"es", "Controladores de BD"}, {"tr", "Veritabanı sürücüleri"}, {"pt", "Controladores de BD"}}},
+            {"t_side_helpers",     {{"en", "Helpers"}, {"bg", "Помощни инструменти"}, {"ru", "Утилиты"}, {"es", "Utilidades"}, {"tr", "Yardımcılar"}, {"pt", "Utilitários"}}},
+            {"t_side_jobs",        {{"en", "Jobs"}, {"bg", "Jobs"}, {"ru", "Jobs"}, {"es", "Jobs"}, {"tr", "Görevler"}, {"pt", "Jobs"}}},
+            {"t_side_events",      {{"en", "Events"}, {"bg", "Events"}, {"ru", "События"}, {"es", "Eventos"}, {"tr", "Olaylar"}, {"pt", "Eventos"}}},
+            {"t_side_mail",        {{"en", "Mail (SMTP)"}, {"bg", "Mail (SMTP)"}, {"ru", "Почта (SMTP)"}, {"es", "Correo (SMTP)"}, {"tr", "E-posta (SMTP)"}, {"pt", "E-mail (SMTP)"}}},
+            {"t_side_events_and_jobs", {{"en", "Events & Jobs walkthrough"}, {"bg", "Events & Jobs — стъпка по стъпка"}, {"ru", "Events & Jobs — пошагово"}, {"es", "Events & Jobs — recorrido"}, {"tr", "Events & Jobs — adım adım"}, {"pt", "Events & Jobs — passo a passo"}}},
+            {"t_side_api_index",   {{"en", "API index"}, {"bg", "API индекс"}, {"ru", "Индекс API"}, {"es", "Índice de API"}, {"tr", "API dizini"}, {"pt", "Índice da API"}}},
 
             {"t_on_this_page",        {{"en", "On this page"}, {"bg", "На тази страница"}, {"ru", "На этой странице"}, {"es", "En esta página"}, {"tr", "Bu sayfada"}, {"pt", "Nesta página"}}},
             {"t_license",             {{"en", "License"}, {"bg", "Лиценз"}, {"ru", "Лицензия"}, {"es", "Licencia"}, {"tr", "Lisans"}, {"pt", "Licença"}}},
@@ -361,7 +365,20 @@ namespace Routes
                     {"unit-file", "Unit file", "Unit файл", false},
                     {"enable", "Enabling the service", "Активиране на услугата", false},
                 },
-                "guides/proxies", "garvan/env"
+                "guides/proxies", "guides/events_and_jobs"
+            }},
+            {"guides/events_and_jobs", {
+                "guides/events_and_jobs", "guides",
+                "Events & Jobs walkthrough", "Events & Jobs — стъпка по стъпка",
+                "End-to-end: fire an event, watch the job pipeline dispatch a real SMTP mail.",
+                "От край до край: fire на event, listener chain, dispatch на job и реален SMTP mail.",
+                {
+                    {"flow", "The full flow", "Пълният поток", false},
+                    {"curl", "Trigger with curl", "Тригериране с curl", false},
+                    {"logs", "Reading the server log", "Четене на server log-а", false},
+                    {"troubleshoot", "Troubleshooting", "Отстраняване на проблеми", false},
+                },
+                "guides/systemd", "garvan/env"
             }},
 
             // -------- Garvan-specific --------
@@ -373,7 +390,7 @@ namespace Routes
                     {"loading", "Loading the file", "Зареждане на файла", false},
                     {"variables", "Common variables", "Често срещани променливи", false},
                 },
-                "guides/systemd", "garvan/orm"
+                "guides/events_and_jobs", "garvan/orm"
             }},
             {"garvan/orm", {
                 "garvan/orm", "garvan",
@@ -433,9 +450,52 @@ namespace Routes
                 "The Garvan command line tool.", "Командният инструмент на Garvan.",
                 {
                     {"install", "Installing", "Инсталация", false},
-                    {"commands", "Available commands", "Налични команди", false},
+                    {"commands", "Scaffolding & DB commands", "Скафолдинг и DB команди", false},
+                    {"runtime-verbs", "Runtime verbs (jobs, events, config)", "Runtime verbs (jobs, events, config)", false},
                 },
-                "garvan/migrations", "garvan/databases"
+                "garvan/migrations", "garvan/jobs"
+            }},
+            {"garvan/jobs", {
+                "garvan/jobs", "garvan",
+                "Jobs", "Jobs",
+                "Job classes, JobRegistry, JobDispatcher and the sync driver.",
+                "Job класове, JobRegistry, JobDispatcher и sync driver-ът.",
+                {
+                    {"api", "Job API", "Job API", false},
+                    {"registry", "Registering a job", "Регистрация на job", false},
+                    {"dispatcher", "Dispatching", "Dispatch-ване", false},
+                    {"sync-driver", "SyncDriver", "SyncDriver", false},
+                    {"example", "Example: SendTestMail", "Пример: SendTestMail", false},
+                },
+                "garvan/kalpasan", "garvan/events"
+            }},
+            {"garvan/events", {
+                "garvan/events", "garvan",
+                "Events", "Events",
+                "Events, listeners and the EventDispatcher.",
+                "Events, listener-и и EventDispatcher.",
+                {
+                    {"api", "Event API", "Event API", false},
+                    {"listener", "Writing a listener", "Писане на listener", false},
+                    {"dispatcher", "Firing events", "Изстрелване на event-и", false},
+                    {"provider", "Registering in a service provider", "Регистрация в service provider", false},
+                    {"example", "Example: UserRegistered chain", "Пример: UserRegistered chain", false},
+                },
+                "garvan/jobs", "garvan/mail"
+            }},
+            {"garvan/mail", {
+                "garvan/mail", "garvan",
+                "Mail (SMTP)", "Mail (SMTP)",
+                "Real HTML mail sending over SMTP via libcurl.",
+                "Реален HTML mail send по SMTP през libcurl.",
+                {
+                    {"config", "MAIL_* configuration", "MAIL_* конфигурация", false},
+                    {"ports", "Ports & encryption", "Портове и encryption", false},
+                    {"html", "HTML content", "HTML съдържание", false},
+                    {"debug", "Debugging the SMTP dialog", "Debug на SMTP dialog-а", false},
+                    {"providers", "Provider examples", "Примери с provider-и", false},
+                },
+                "garvan/events", "garvan/databases"
             }},
             {"garvan/databases", {
                 "garvan/databases", "garvan",
@@ -448,7 +508,7 @@ namespace Routes
                     {"monetdb", "MonetDB", "MonetDB", false},
                     {"sqlite", "SQLite", "SQLite", false},
                 },
-                "garvan/kalpasan", "garvan/helpers"
+                "garvan/mail", "garvan/helpers"
             }},
             {"garvan/helpers", {
                 "garvan/helpers", "garvan",

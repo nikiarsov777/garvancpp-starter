@@ -1,0 +1,109 @@
+<h1>Events</h1>
+<p>Events позволяват на една част от приложението да уведоми останалите, без
+да знае кой слуша. Fire-ваш event веднъж; всеки регистриран listener се
+изпълнява — синхронно, по реда на регистрация, в същия thread.</p>
+
+<h2 id="api">Event API</h2>
+<p>Event-ът е малък value class, наследяващ <code>Garvan::Event</code>:</p>
+
+<pre><code class="language-cpp">// app/events/UserRegistered.h
+#include "events/Event.h"
+#include "tools/JsonValue.h"
+
+namespace AppEvents {
+
+class UserRegistered : public Garvan::Event
+{
+public:
+    UserRegistered() = default;
+    UserRegistered(int id, std::string mail, std::string person)
+        : user_id(id), email(std::move(mail)), name(std::move(person)) {}
+
+    std::string eventName() const override { return "UserRegistered"; }
+
+    Garvan::JsonValue payload() const override;
+    static std::unique_ptr&lt;Garvan::Event&gt;
+        fromPayload(const Garvan::JsonValue&amp; p);
+
+    int         user_id{};
+    std::string email;
+    std::string name;
+};
+
+} // namespace AppEvents
+</code></pre>
+
+<h2 id="listener">Писане на listener</h2>
+<p>Наследяваш <code>Garvan::Listener&lt;YourEvent&gt;</code> и имплементираш
+<code>handle()</code>:</p>
+
+<pre><code class="language-cpp">// app/listeners/SendWelcomeEmailListener.h
+#include "events/Listener.h"
+#include "../events/UserRegistered.h"
+
+class SendWelcomeEmailListener
+    : public Garvan::Listener&lt;AppEvents::UserRegistered&gt;
+{
+public:
+    void handle(const AppEvents::UserRegistered&amp; event) override;
+};
+</code></pre>
+
+<p>Тялото на listener-a може да прави всичко — да пише в базата, да вика
+service или да dispatch-ва job (което точно
+<code>SendWelcomeEmailListener</code> прави, forward-вайки към
+<code>AppJobs::SendTestMail</code>).</p>
+
+<h2 id="dispatcher">Изстрелване на event-и</h2>
+<pre><code class="language-cpp">#include "events/EventDispatcher.h"
+#include "app/events/UserRegistered.h"
+
+Garvan::EventDispatcher::fire(
+    std::make_unique&lt;AppEvents::UserRegistered&gt;(42, "u@x.com", "Ada"));
+</code></pre>
+
+<p>Listener-ите се викат синхронно в същия thread; ако някой хвърли,
+следващите пак се изпълняват, а <code>fire()</code> re-raise-ва първата
+exception в края.</p>
+
+<h2 id="provider">Регистрация в service provider</h2>
+<p>Две регистрации в <code>EventServiceProvider::register_()</code>:</p>
+
+<pre><code class="language-cpp">// app/providers/EventServiceProvider.cpp
+Garvan::EventDispatcher::listen&lt;AppEvents::UserRegistered,
+                                LogRegistrationListener&gt;();
+Garvan::EventDispatcher::listen&lt;AppEvents::UserRegistered,
+                                SendWelcomeEmailListener&gt;();
+
+// Optional: регистрира event factory-то за admin API `event:fire`
+GARVAN_REGISTER_EVENT(AppEvents::UserRegistered);
+</code></pre>
+
+<p><em>За разлика от</em> <code>GARVAN_REGISTER_JOB</code>, event макросът е
+ОК: dispatch ключът се взема от <code>eventName()</code> runtime, а не от
+stringified type name.</p>
+
+<p>Provider-ите boot-ват в <code>main.cpp:56-60</code> във фиксиран ред —
+<code>AppServiceProvider</code> първи (queue driver-и), после
+<code>JobServiceProvider</code>, накрая <code>EventServiceProvider</code>.
+Listener-ите могат безопасно да dispatch-ват jobs при boot, защото
+jobs вече са регистрирани.</p>
+
+<h2 id="example">Пример: UserRegistered chain</h2>
+<pre>
+GET /api/events/user-registered?email=...&amp;name=...&amp;id=...
+  → EventDispatcher::fire(UserRegistered)
+      → LogRegistrationListener::handle()      (sync log ред)
+      → SendWelcomeEmailListener::handle()
+           → JobDispatcher::dispatch(SendTestMail)
+                → SyncDriver (inline)
+                     → SendTestMail::handle()  (libcurl SMTP send)
+</pre>
+
+<p>Виж <a href="/guides/events_and_jobs">Events &amp; Jobs стъпка по стъпка</a>
+за end-to-end curl-и-провери тур.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/jobs"><span class="label">{{t_prev}}</span><span class="title">Jobs</span></a>
+    <a class="next" href="/garvan/mail"><span class="label">{{t_next}}</span><span class="title">Mail (SMTP)</span></a>
+</div>

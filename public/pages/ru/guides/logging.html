@@ -1,0 +1,34 @@
+<h1>Логирование</h1>
+<p>Garvan поставляет два logging средства: встроенные <code>CROW_LOG_*</code> макросы Crow и небольшой helper класс <code>Logger</code> в <code>vendors/Garvan/include/tools/Logger.h</code>.</p>
+
+<h2 id="crow-log">CROW_LOG_* макросы</h2>
+<p>Макросы Crow — stream-style и уважают global level threshold:</p>
+
+<pre><code class="language-cpp">CROW_LOG_DEBUG    &lt;&lt; "incoming request: " &lt;&lt; req.url;
+CROW_LOG_INFO     &lt;&lt; "user " &lt;&lt; user_id &lt;&lt; " logged in";
+CROW_LOG_WARNING  &lt;&lt; "deprecated endpoint hit";
+CROW_LOG_ERROR    &lt;&lt; "db connection failed: " &lt;&lt; ex.what();
+CROW_LOG_CRITICAL &lt;&lt; "out of memory";
+</code></pre>
+
+<h2 id="garvan-logger">Garvan Logger</h2>
+<p>Используйте <code>Logger</code> внутри service или model кода когда Crow app недоступен:</p>
+
+<pre><code class="language-cpp">#include "tools/Logger.h"
+
+Logger::info("indexing started");
+Logger::error("could not open file: {}", path);
+</code></pre>
+
+<h2 id="log-levels">Уровни логирования</h2>
+<p>Установите threshold при старте:</p>
+
+<pre><code class="language-cpp">crow::logger::setLogLevel(crow::LogLevel::Warning);
+</code></pre>
+
+<p>Всё ниже Warning будет отфильтровано. В production обычно нужно Warning или Error; во время разработки Debug более полезно.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/routes"><span class="label">{{t_prev}}</span><span class="title">Маршруты</span></a>
+    <a class="next" href="/guides/json"><span class="label">{{t_next}}</span><span class="title">JSON</span></a>
+</div>

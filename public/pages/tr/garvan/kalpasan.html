@@ -1,0 +1,71 @@
+<h1>Kalpasan CLI</h1>
+<p><code>kalpasan</code> projenin komut satırı arkadaşıdır. Model, controller
+ve service scaffold eder, migration ve seeder çalıştırır ve file watching
+ile bir development sunucusu başlatır.</p>
+
+<h2 id="install">Kurulum</h2>
+<p>Binary <code>vendors/Garvan/kalpasan</code>'da yaşar. Proje kökündeki bir
+symlink çağırmayı kolaylaştırır:</p>
+
+<pre><code class="language-bash">ln -s vendors/Garvan/kalpasan kalpasan
+./kalpasan --help
+</code></pre>
+
+<h2 id="commands">Scaffolding ve DB komutları</h2>
+<pre><code class="language-bash">./kalpasan make:model User           # scaffold app/models/User.{h,cpp}
+./kalpasan make:controller User      # scaffold app/controllers/UserController.{h,cpp}
+./kalpasan make:service User         # scaffold app/services/UserService.{h,cpp}
+./kalpasan make:migration create_users
+
+./kalpasan db:migrate                # garvan-migrate up'a delege eder
+./kalpasan db:rollback               # garvan-migrate down'a delege eder
+./kalpasan db:seed                   # db/seeders/ dosyalarını çalıştırır
+
+./kalpasan serve --watch             # .cpp/.h değişince rebuild + restart
+</code></pre>
+
+<p>Tüm komutlar aktif <code>.env</code>'e saygı gösterir, böylece doğru DB'yi hedeflerler.</p>
+
+<h2 id="runtime-verbs">Runtime verbs (jobs, events, config)</h2>
+<p>Bu verb'ler <em>çalışan</em> uygulamayla HTTP (libcurl) üzerinden
+konuşur. <code>.env</code>'den <code>KALPASAN_ADMIN_URL</code> (default
+<code>http://127.0.0.1:9090</code>) ve <code>KALPASAN_ADMIN_TOKEN</code>
+okurlar, sonra <code>routes/AdminRoute.cpp</code>'deki bearer-guarded
+admin endpoint'lerine giderler.</p>
+
+<pre><code class="language-bash">./kalpasan job:list                                # GET /api/admin/jobs
+./kalpasan job:dispatch SendTestMail \              # POST /api/admin/jobs/dispatch
+    --field to=you@x.com \
+    --field subject="Hi" \
+    --field body="&lt;h1&gt;Hello&lt;/h1&gt;"
+
+./kalpasan event:list                              # GET /api/admin/events
+./kalpasan event:fire UserRegistered \             # POST /api/admin/events/fire
+    --field id=42 \
+    --field email=you@x.com \
+    --field name="Ada"
+
+./kalpasan route:list                              # HTTP route'ları yazdır
+./kalpasan config:show                             # dump .env
+./kalpasan config:get MAIL_HOST                    # bir anahtarı oku
+./kalpasan config:set MAIL_HOST smtp.new.com       # bir anahtarı yeniden yaz
+./kalpasan config:key:generate                     # yeni APP_KEY (base64 32-byte)
+</code></pre>
+
+<div class="admonition note">
+    <div class="admonition-title">Admin auth guard</div>
+    <p><code>AdminRoute</code> üç koşul sağlanmadıkça isteği reddeder:
+    <code>.env</code>'de <code>KALPASAN_ADMIN_TOKEN</code> boş değil, istek
+    loopback'ten (<code>127.0.0.1</code> veya <code>::1</code>) geliyor ve
+    <code>Authorization: Bearer &lt;token&gt;</code> header'ı uyuyor. Aksi
+    halde 401 / 403 / 503 durumlu JSON error döner (bkz.
+    <code>routes/AdminRoute.cpp:55-82</code>).</p>
+</div>
+
+<p>Bkz. <a href="/garvan/jobs">Jobs</a>, <a href="/garvan/events">Olaylar</a>
+ve <a href="/guides/events_and_jobs">Events &amp; Jobs adım adım</a>.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/migrations"><span class="label">{{t_prev}}</span><span class="title">Göçler</span></a>
+    <a class="next" href="/garvan/jobs"><span class="label">{{t_next}}</span><span class="title">Jobs</span></a>
+</div>

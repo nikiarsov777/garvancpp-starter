@@ -1,0 +1,88 @@
+<h1>Jobs</h1>
+<p>Jobs are units of background work. Every job is a C++ class that derives from
+<code>Garvan::Job</code>. They can be triggered directly, from an event listener,
+or over HTTP through the admin API (which is what <code>kalpasan job:dispatch</code>
+uses internally).</p>
+
+<h2 id="api">Job API</h2>
+<p>Override four things and provide one static factory:</p>
+
+<pre><code class="language-cpp">// app/jobs/MyJob.h
+#include "queue/Job.h"
+#include "tools/JsonValue.h"
+
+namespace AppJobs {
+
+class MyJob : public Garvan::Job
+{
+public:
+    MyJob() = default;
+    MyJob(std::string arg) : arg_(std::move(arg)) {}
+
+    void handle() override;                                 // do the work
+    std::string jobName() const override { return "MyJob"; }
+    std::string connection() const override { return "sync"; } // sync | async | database
+
+    Garvan::JsonValue payload() const override;             // serialize for persisted queues
+    static std::unique_ptr&lt;Garvan::Job&gt;
+        fromPayload(const Garvan::JsonValue&amp; p);            // reverse of payload()
+
+private:
+    std::string arg_;
+};
+
+} // namespace AppJobs
+</code></pre>
+
+<h2 id="registry">Registering a job</h2>
+<p>Register every user job in <code>JobServiceProvider::register_()</code>. Use
+<code>JobRegistry::bind()</code> directly with the short name from
+<code>jobName()</code>:</p>
+
+<pre><code class="language-cpp">// app/providers/JobServiceProvider.cpp
+Garvan::JobRegistry::bind("MyJob", &amp;AppJobs::MyJob::fromPayload);
+</code></pre>
+
+<div class="admonition warning">
+    <div class="admonition-title">Do not use <code>GARVAN_REGISTER_JOB</code> for user jobs</div>
+    <p>The macro <code>GARVAN_REGISTER_JOB(AppJobs::MyJob)</code> stringifies the
+    whole token and registers the key as <code>"AppJobs::MyJob"</code>, which
+    then does not match <code>jobName()</code> or the short name
+    <code>kalpasan job:dispatch</code> expects. See the fix in
+    <code>app/providers/JobServiceProvider.cpp:18</code>.</p>
+</div>
+
+<h2 id="dispatcher">Dispatching</h2>
+<p>Anywhere in your code — controller, listener, or another job:</p>
+
+<pre><code class="language-cpp">#include "queue/JobDispatcher.h"
+#include "app/jobs/MyJob.h"
+
+Garvan::JobDispatcher::dispatch(std::make_unique&lt;AppJobs::MyJob&gt;("hello"));
+</code></pre>
+
+<p>The dispatcher routes the job to the driver named by
+<code>job-&gt;connection()</code>. Drivers are bound by service providers; today
+only <code>"sync"</code> is wired in the starter.</p>
+
+<h2 id="sync-driver">SyncDriver</h2>
+<p><code>SyncDriver</code> runs the job inline in the calling thread. This is the
+default in Phase A and gives you the same call-and-return semantics as a plain
+function call — perfect for testing, low-throughput tasks, or pipelines
+triggered by an HTTP request. Async and database-backed drivers will slot into
+the same <code>JobDispatcher</code> API in later phases with no changes to your
+job classes.</p>
+
+<h2 id="example">Example: SendTestMail</h2>
+<p>The bundled <code>AppJobs::SendTestMail</code>
+(<code>app/jobs/SendTestMail.h:21</code>) is a real, sendable job. Its
+<code>handle()</code> opens an SMTP session with libcurl, sends an HTML email
+using the <code>MAIL_*</code> block from <code>.env</code>, and logs the
+outcome to stdout. See <a href="/garvan/mail">Mail (SMTP)</a> for the SMTP
+side and <a href="/garvan/kalpasan">Kalpasan CLI</a> for the
+<code>job:dispatch</code> verb.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/kalpasan"><span class="label">{{t_prev}}</span><span class="title">Kalpasan CLI</span></a>
+    <a class="next" href="/garvan/events"><span class="label">{{t_next}}</span><span class="title">Events</span></a>
+</div>

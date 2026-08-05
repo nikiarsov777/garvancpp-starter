@@ -1,7 +1,7 @@
 <section class="home-hero">
     <img class="hero-logo" src="/static/img/garvan.png" alt="Garvan" />
     <h1>Garvan C++</h1>
-    <p class="lead">A fast and easy-to-use C++ web framework. Garvan extends Crow with an ORM, migrations, a model/controller/service tier, and a command-line toolbox &mdash; so you can ship HTTP and WebSocket services without leaving C++.</p>
+    <p class="lead">A fast, batteries-included <strong>C++23</strong> web framework. Garvan extends Crow with an ORM, migrations, an event bus and job queue with a real SMTP mail job, a model/controller/service tier, and the <code>kalpasan</code> CLI &mdash; so you can ship HTTP, WebSocket, and background work without leaving C++.</p>
     <div class="cta-row">
         <a class="btn-primary-garvan" href="/getting_started/setup_linux">Get started</a>
         <a class="btn-outline-garvan" href="/guides/app">Read the guides</a>
@@ -29,6 +29,11 @@
         <div class="icon">&#128279;</div>
         <h3>WebSockets</h3>
         <p>Real-time bidirectional communication with the same routing model as HTTP.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon">&#128231;</div>
+        <h3>Events &amp; Jobs</h3>
+        <p>Fire events, dispatch jobs, and send real HTML mail over SMTP with libcurl &mdash; all in-process.</p>
     </div>
 </section>
 

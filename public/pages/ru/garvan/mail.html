@@ -1,0 +1,106 @@
+<h1>Почта (SMTP)</h1>
+<p>Starter поставляется с одним реальным, отправляющим job:
+<code>AppJobs::SendTestMail</code>. Его <code>handle()</code>
+(<code>app/jobs/SendTestMail.cpp:58</code>) открывает SMTP-сессию с
+libcurl, строит RFC 822 сообщение с HTML телом, аутентифицируется,
+отправляет и логирует результат. Всё управляется блоком
+<code>MAIL_*</code> в <code>.env</code>.</p>
+
+<h2 id="config">Конфигурация MAIL_*</h2>
+<pre><code class="language-dotenv">MAIL_DRIVER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=465
+MAIL_USERNAME="user@example.com"
+MAIL_PASSWORD="app-password"
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="user@example.com"
+MAIL_FROM_NAME="Your App"
+MAIL_AUTHENTICATION=plain
+</code></pre>
+
+<table>
+    <thead><tr><th>Ключ</th><th>Назначение</th></tr></thead>
+    <tbody>
+        <tr><td><code>MAIL_HOST</code>, <code>MAIL_PORT</code></td><td>SMTP endpoint.</td></tr>
+        <tr><td><code>MAIL_USERNAME</code>, <code>MAIL_PASSWORD</code></td><td>Учётные данные (libcurl auto-negotiate AUTH механизм).</td></tr>
+        <tr><td><code>MAIL_ENCRYPTION</code></td><td><code>tls</code>, <code>ssl</code> или <code>smtps</code>. <code>ssl</code>/<code>smtps</code> форсируют implicit TLS независимо от порта.</td></tr>
+        <tr><td><code>MAIL_FROM_ADDRESS</code>, <code>MAIL_FROM_NAME</code></td><td>Envelope sender + display name в <code>From:</code>.</td></tr>
+        <tr><td><code>MAIL_AUTHENTICATION</code></td><td>Информационно; libcurl auto-negotiate.</td></tr>
+    </tbody>
+</table>
+
+<p>Значения могут быть в <code>"..."</code>; job снимает окружающие
+кавычки перед использованием.</p>
+
+<h2 id="ports">Порты и encryption</h2>
+<ul>
+    <li><strong>465</strong> → implicit TLS (<code>smtps://</code>). Handshake до SMTP banner.</li>
+    <li><strong>587</strong> → STARTTLS. Job использует <code>smtp://</code> и форсирует TLS через <code>CURLUSESSL_ALL</code>.</li>
+    <li>Любой другой порт с <code>MAIL_ENCRYPTION=ssl</code> или <code>smtps</code> → форсированный implicit TLS.</li>
+</ul>
+
+<h2 id="html">HTML содержимое</h2>
+<p>Header RFC 822 фиксирован на
+<code>Content-Type: text/html; charset=UTF-8</code> с 8-bit CTE, так что
+поле <code>body</code> может содержать произвольный HTML включая UTF-8:</p>
+
+<pre><code class="language-bash">curl "http://localhost:9090/api/jobs/send-mail?to=you@x.com&amp;subject=Hi&amp;body=&lt;h1&gt;Hello&lt;/h1&gt;&lt;p&gt;&lt;b&gt;Bold&lt;/b&gt;&lt;/p&gt;"
+</code></pre>
+
+<h2 id="debug">Debug SMTP-диалога</h2>
+<p>Если отправка проходит по мнению libcurl, но письмо не попадает в
+inbox (spam, greylist, тихое отклонение), временно включите verbose:</p>
+
+<pre><code class="language-cpp">// app/jobs/SendTestMail.cpp
+curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);   // смените 0L на 1L
+</code></pre>
+
+<p>Rebuild, restart, повторите. Получите полный TLS handshake плюс
+SMTP-диалог на stdout сервера — <code>EHLO</code>, <code>AUTH</code>,
+<code>MAIL FROM</code>, <code>RCPT TO</code>, <code>DATA</code> и
+финальный <code>250 2.0.0 Ok: queued as ...</code>.</p>
+
+<div class="admonition warning">
+    <div class="admonition-title">Не commit-ьте изменение</div>
+    <p>Verbose SMTP логи утекают sensitive headers и вредят производительности.
+    Верните на <code>0L</code> перед commit.</p>
+</div>
+
+<h2 id="providers">Примеры provider-ов</h2>
+
+<p><strong>Gmail (app password, port 465):</strong></p>
+<pre><code class="language-dotenv">MAIL_HOST=smtp.gmail.com
+MAIL_PORT=465
+MAIL_USERNAME=you@gmail.com
+MAIL_PASSWORD=xxxx-xxxx-xxxx-xxxx    # app password, не пароль аккаунта
+MAIL_ENCRYPTION=ssl
+MAIL_FROM_ADDRESS=you@gmail.com
+</code></pre>
+
+<p><strong>SendGrid (API relay, port 587 STARTTLS):</strong></p>
+<pre><code class="language-dotenv">MAIL_HOST=smtp.sendgrid.net
+MAIL_PORT=587
+MAIL_USERNAME=apikey
+MAIL_PASSWORD=SG.xxxxxxxxxxxxxxxxxxxxxxxx
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=you@yourdomain.com
+</code></pre>
+
+<p><strong>Custom SMTP (port 465):</strong></p>
+<pre><code class="language-dotenv">MAIL_HOST=mail.your-host.com
+MAIL_PORT=465
+MAIL_USERNAME=info@yourdomain.com
+MAIL_PASSWORD=your-mailbox-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=info@yourdomain.com
+MAIL_FROM_NAME="Your Brand"
+</code></pre>
+
+<p>См. <a href="/garvan/jobs">Jobs</a> для самого job pipeline и
+<a href="/guides/events_and_jobs">Events &amp; Jobs пошагово</a> для
+end-to-end примера.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/events"><span class="label">{{t_prev}}</span><span class="title">События</span></a>
+    <a class="next" href="/garvan/databases"><span class="label">{{t_next}}</span><span class="title">Драйверы БД</span></a>
+</div>

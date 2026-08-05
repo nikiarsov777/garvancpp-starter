@@ -8,7 +8,7 @@
 ./kalpasan --help
 </code></pre>
 
-<h2 id="commands">Available commands</h2>
+<h2 id="commands">Scaffolding &amp; DB commands</h2>
 <pre><code class="language-bash">./kalpasan make:model User           # scaffold app/models/User.{h,cpp}
 ./kalpasan make:controller User      # scaffold app/controllers/UserController.{h,cpp}
 ./kalpasan make:service User         # scaffold app/services/UserService.{h,cpp}
@@ -23,7 +23,45 @@
 
 <p>All commands respect the active <code>.env</code> file so they target the right database.</p>
 
+<h2 id="runtime-verbs">Runtime verbs (jobs, events, config)</h2>
+<p>These verbs talk to a <em>running</em> app via HTTP (libcurl). They read
+<code>KALPASAN_ADMIN_URL</code> (default <code>http://127.0.0.1:9090</code>)
+and <code>KALPASAN_ADMIN_TOKEN</code> from <code>.env</code>, then hit the
+bearer-guarded admin endpoints in <code>routes/AdminRoute.cpp</code>.</p>
+
+<pre><code class="language-bash">./kalpasan job:list                                # GET /api/admin/jobs
+./kalpasan job:dispatch SendTestMail \              # POST /api/admin/jobs/dispatch
+    --field to=you@x.com \
+    --field subject="Hi" \
+    --field body="&lt;h1&gt;Hello&lt;/h1&gt;"
+
+./kalpasan event:list                              # GET /api/admin/events
+./kalpasan event:fire UserRegistered \             # POST /api/admin/events/fire
+    --field id=42 \
+    --field email=you@x.com \
+    --field name="Ada"
+
+./kalpasan route:list                              # print HTTP routes
+./kalpasan config:show                             # dump .env
+./kalpasan config:get MAIL_HOST                    # read one key
+./kalpasan config:set MAIL_HOST smtp.new.com       # rewrite one key
+./kalpasan config:key:generate                     # new APP_KEY (base64 32-byte)
+</code></pre>
+
+<div class="admonition note">
+    <div class="admonition-title">Admin auth guard</div>
+    <p><code>AdminRoute</code> refuses the request unless three conditions
+    hold: <code>KALPASAN_ADMIN_TOKEN</code> is non-empty in <code>.env</code>,
+    the request comes from loopback (<code>127.0.0.1</code> or
+    <code>::1</code>), and the <code>Authorization: Bearer &lt;token&gt;</code>
+    header matches. Otherwise you get a JSON error with status 401 / 403 / 503
+    (see <code>routes/AdminRoute.cpp:55-82</code>).</p>
+</div>
+
+<p>See <a href="/garvan/jobs">Jobs</a>, <a href="/garvan/events">Events</a>
+and <a href="/guides/events_and_jobs">Events &amp; Jobs walkthrough</a>.</p>
+
 <div class="page-nav">
     <a class="prev" href="/garvan/migrations"><span class="label">{{t_prev}}</span><span class="title">Migrations</span></a>
-    <a class="next" href="/garvan/databases"><span class="label">{{t_next}}</span><span class="title">Database drivers</span></a>
+    <a class="next" href="/garvan/jobs"><span class="label">{{t_next}}</span><span class="title">Jobs</span></a>
 </div>

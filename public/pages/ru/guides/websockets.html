@@ -1,0 +1,28 @@
+<h1>WebSockets</h1>
+<p>WebSockets дают вам двунаправленные каналы с низкой задержкой на том же порту, что и ваши HTTP routes. Garvan выставляет WebSocket API Crow без изменений.</p>
+
+<h2 id="defining">Определение websocket route</h2>
+<pre><code class="language-cpp">CROW_WEBSOCKET_ROUTE(app, "/ws")
+    .onopen([&amp;](crow::websocket::connection &amp;conn) {
+        CROW_LOG_INFO &lt;&lt; "client connected: " &lt;&lt; &amp;conn;
+    })
+    .onmessage([&amp;](crow::websocket::connection &amp;conn,
+                    const std::string &amp;data, bool is_binary) {
+        conn.send_text("you said: " + data);
+    })
+    .onclose([&amp;](crow::websocket::connection &amp;conn, const std::string &amp;reason, uint16_t code) {
+        CROW_LOG_INFO &lt;&lt; "client gone: " &lt;&lt; reason;
+    });
+</code></pre>
+
+<h2 id="events">События соединения</h2>
+<p>Обычно вам нужны три handler-а: <code>onopen</code> для отслеживания новых соединений, <code>onmessage</code> для входящих frames и <code>onclose</code> для очистки state. Храните соединения в thread-safe контейнере если нужен broadcast.</p>
+
+<pre><code class="language-cpp">std::mutex                                  mu;
+std::unordered_set&lt;crow::websocket::connection*&gt; clients;
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/compression"><span class="label">{{t_prev}}</span><span class="title">Сжатие</span></a>
+    <a class="next" href="/guides/base64"><span class="label">{{t_next}}</span><span class="title">Base64</span></a>
+</div>

@@ -1,0 +1,41 @@
+<h1>Serviços</h1>
+<p>Os serviços ficam entre controllers e modelos. Contêm lógica de negócio que não pertence a nenhum &mdash; validação, operações multi-tabela, chamadas a APIs externas.</p>
+
+<h2 id="base-service">BaseService</h2>
+<p>A classe base espelha <code>BaseContoller</code> mas com todos os métodos virtual:</p>
+
+<pre><code class="language-cpp">class BaseService : public Helper
+{
+public:
+    virtual json index();
+    virtual json create(json model);
+    json         create(const crow::request &amp;req); // conveniência: faz parse do body por si
+    virtual json read(string id);
+    virtual json update(json model);
+    virtual void erease();
+    virtual json getById(string id);
+};
+</code></pre>
+
+<h2 id="injection">Usar um serviço num controller</h2>
+<p>Instancie o serviço dentro do método do controller, ou injete-o através do construtor:</p>
+
+<pre><code class="language-cpp">json PostController::index()
+{
+    PostService svc;
+    auto posts = svc.index();
+
+    // pós-processamento: esconder campos private, anexar metadata de paginação, etc.
+    json out;
+    out["data"]  = posts;
+    out["count"] = posts.size();
+    return out;
+}
+</code></pre>
+
+<p>A camada de serviços também facilita testes &mdash; os controllers ficam shims finos e os serviços podem ser exercitados sem arrancar o servidor HTTP.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/controllers"><span class="label">{{t_prev}}</span><span class="title">Controladores</span></a>
+    <a class="next" href="/garvan/migrations"><span class="label">{{t_next}}</span><span class="title">Migrações</span></a>
+</div>

@@ -1,0 +1,82 @@
+<h1>Events &amp; Jobs — passo a passo</h1>
+<p>Este guia leva-o de um único pedido HTTP até um email HTML real na sua
+inbox. Exercita cada camada do pipeline de event / job no starter — event
+dispatcher, listener chain, job dispatcher, sync driver e transporte SMTP
+via libcurl.</p>
+
+<h2 id="flow">O fluxo completo</h2>
+<pre>
+GET /api/events/user-registered?email=...&amp;name=...&amp;id=...
+  → EventDispatcher::fire(AppEvents::UserRegistered)
+      → LogRegistrationListener::handle()      (escreve linha de log)
+      → SendWelcomeEmailListener::handle()
+           → JobDispatcher::dispatch(SendTestMail)
+                → SyncDriver (inline neste thread HTTP)
+                     → SendTestMail::handle()  (libcurl SMTP send)
+</pre>
+
+<p>Em Phase A nada é enfileirado num worker em background — cada passo
+corre no thread do request e a resposta HTTP só volta quando o email
+foi entregue ao servidor SMTP. Ou seja: se receber HTTP 200, o mail foi
+aceite pelo mail server; se foi rejeitado, o pedido acaba com o erro
+visível no server log.</p>
+
+<h2 id="curl">Trigger com curl</h2>
+<p>Com <code>./bin/app.bin</code> a correr e MAIL_* configurado (ver
+<a href="/garvan/mail">E-mail (SMTP)</a>):</p>
+
+<pre><code class="language-bash">curl "http://localhost:9090/api/events/user-registered?email=you@x.com&amp;name=You&amp;id=1"
+</code></pre>
+
+<p>Resposta esperada:</p>
+<pre><code class="language-json">{
+  "status": "fired",
+  "event": "UserRegistered",
+  "listeners": 2,
+  "payload": {"user_id": 1, "email": "you@x.com", "name": "You"}
+}
+</code></pre>
+
+<h2 id="logs">Ler o server log</h2>
+<p>No terminal onde <code>./bin/app.bin</code> corre deverá ver, por
+ordem:</p>
+
+<pre><code>[LogRegistrationListener] user #1 You &lt;you@x.com&gt; registered
+[SendTestMail] dispatch driver=smtp host=smtp.example.com:465 enc=tls from=&lt;...&gt; -> to=&lt;you@x.com&gt; subject="Welcome ..." body_len=...
+[SendTestMail] SMTP send OK via smtps://smtp.example.com:465 -&gt; &lt;you@x.com&gt;
+(YYYY-MM-DD HH:MM:SS) [INFO    ] Response: ... /api/events/user-registered?... 200 0
+</code></pre>
+
+<p>Se em vez disso vir <code>SMTP send FAILED</code>, a última linha
+contém a string de erro do libcurl — essa é a mensagem accionável.</p>
+
+<h2 id="troubleshoot">Resolução de problemas</h2>
+<ul>
+    <li><strong>404 HTML em vez de JSON</strong> — o binary a correr não
+        tem as rotas registadas. Rebuild com <code>./make.sh</code> e
+        restart.</li>
+    <li><strong>404 JSON <code>"no factory for '...'"</code></strong> — o
+        nome do job ou event no URL / payload não corresponde a nenhuma
+        entrada registada. Use <code>./kalpasan job:list</code> e
+        <code>./kalpasan event:list</code> para ver o que está bound;
+        verifique <code>app/providers/JobServiceProvider.cpp</code> e
+        <code>EventServiceProvider.cpp</code>.</li>
+    <li><strong><code>SMTP send OK</code> mas o mail não chega</strong> —
+        primeiro verifique a pasta de spam. Se estiver vazia, active
+        <code>CURLOPT_VERBOSE=1L</code> em
+        <code>app/jobs/SendTestMail.cpp</code>, rebuild, retry e leia o
+        diálogo SMTP completo (<a href="/garvan/mail#debug">detalhes</a>).</li>
+    <li><strong>Bloqueio silencioso</strong> — o servidor SMTP provavelmente
+        não responde. Experimente <code>openssl s_client -connect
+        &lt;host&gt;:465</code> da mesma máquina; se falhar, rede /
+        firewall.</li>
+    <li><strong>Problemas de SPF / DKIM</strong> — o primeiro mail de um
+        domain novo para <code>gmail.com</code>, <code>abv.bg</code>, etc.
+        é frequentemente filtrado como spam. Configure SPF / DKIM / DMARC
+        para o seu domain.</li>
+</ul>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/systemd"><span class="label">{{t_prev}}</span><span class="title">Serviço systemd</span></a>
+    <a class="next" href="/garvan/env"><span class="label">{{t_next}}</span><span class="title">Configuração .env</span></a>
+</div>

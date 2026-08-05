@@ -1,0 +1,44 @@
+<h1>App</h1>
+<p>Uma app Garvan é o objeto que liga o servidor HTTP, o router, o logger e quaisquer middlewares registados. Vai ver uma em cada projeto.</p>
+
+<h2 id="simpleapp">SimpleApp</h2>
+<p>A escolha mais comum é <code>crow::SimpleApp</code>. Não tem middlewares ligados ao nível da aplicação &mdash; apenas routes.</p>
+
+<pre><code class="language-cpp">crow::SimpleApp app;
+CROW_ROUTE(app, "/")([] { return "ok"; });
+app.port(9090).run();
+</code></pre>
+
+<h2 id="app-with-middleware">App com middleware</h2>
+<p>Quando precisar de preocupações a nível de pedido (auth, sessões, CORS, etc.), use <code>crow::App&lt;M1, M2, ...&gt;</code>. Os middlewares são compostos da esquerda para a direita e desenrolados em compile time.</p>
+
+<pre><code class="language-cpp">struct AuthMW { struct context {}; void before_handle(...) {} void after_handle(...) {} };
+
+crow::App&lt;AuthMW&gt; app;
+</code></pre>
+
+<h2 id="chaining">Encadeamento de métodos</h2>
+<p>Os métodos de configuração são encadeáveis, o que mantém o entry point legível:</p>
+
+<pre><code class="language-cpp">app.bindaddr("0.0.0.0")
+   .port(9090)
+   .multithreaded()
+   .run();
+</code></pre>
+
+<h2 id="async">Executar assincronamente</h2>
+<p><code>run()</code> bloqueia o thread que chama. Se precisar de continuar a fazer outro trabalho, capture o handle devolvido por <code>run_async()</code> &mdash; deixe a variável sair de scope e o servidor desliga.</p>
+
+<pre><code class="language-cpp">auto handle = app.port(9090).run_async();
+// ... outro trabalho ...
+app.stop();
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/getting_started/a_simple_webpage">
+        <span class="label">{{t_prev}}</span><span class="title">Uma página web simples</span>
+    </a>
+    <a class="next" href="/guides/routes">
+        <span class="label">{{t_next}}</span><span class="title">Rotas</span>
+    </a>
+</div>

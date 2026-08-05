@@ -1,0 +1,51 @@
+<h1>ORM / Query Builder</h1>
+<p>La capa de datos de Garvan tiene dos piezas. <code>Builder</code> genera statements parametrizados a través de un <code>Grammar</code> por base de datos, y luego los ejecuta a través de un <code>DbClient</code>. <code>OModel</code> es la clase base que tus objetos modelo extienden para exponer esos métodos del builder directamente.</p>
+
+<h2 id="builder">Builder</h2>
+<p>El builder usa una API fluida. Cada llamada devuelve el builder para que puedas encadenar condiciones:</p>
+
+<pre><code class="language-cpp">Builder qb(dbClient, grammar, "users",
+           /*public*/{"id","name","email"},
+           /*private*/{"password"});
+
+auto rows = qb
+    .where("active", "=", "1")
+    ->where("role", "=", "admin")
+    ->get();
+</code></pre>
+
+<p>La consulta está parametrizada de extremo a extremo &mdash; los valores suministrados por el usuario fluyen por binding nativo de <code>PreparedStatement</code> en lugar de concatenación de strings. SQL injection no es una opción.</p>
+
+<p>Otros shortcuts: <code>first()</code>, <code>firstOrFail()</code>, <code>find(id)</code>, <code>findOrFail(id)</code>, más <code>insert(json)</code>, <code>update(json)</code> y <code>remove()</code>.</p>
+
+<h2 id="omodel">OModel</h2>
+<p>Los modelos extienden <code>ORM::OModel</code> y declaran su nombre de tabla y listas de columnas:</p>
+
+<pre><code class="language-cpp">class User : public ORM::OModel
+{
+public:
+    User() {
+        table          = "users";
+        primaryKey     = "id";
+        public_columns  = {"id", "name", "email"};
+        private_columns = {"password"};
+    }
+};
+</code></pre>
+
+<h2 id="grammars">Grammars por base de datos</h2>
+<p>Cada driver proporciona una subclase <code>Grammar</code> que sabe cómo emitir el dialecto correcto:</p>
+<ul>
+    <li><code>PostgresGrammar</code></li>
+    <li><code>MysqlGrammar</code></li>
+    <li><code>SqliteGrammar</code></li>
+    <li><code>MonetdbGrammar</code></li>
+    <li><code>MongoGrammar</code> &mdash; produce comandos Mongo en vez de SQL.</li>
+</ul>
+
+<p>El grammar correcto se elige automáticamente a partir de <code>DATABASE_TYPE</code>. Normalmente no tocarás estas clases directamente.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/env"><span class="label">{{t_prev}}</span><span class="title">Configuración .env</span></a>
+    <a class="next" href="/garvan/models"><span class="label">{{t_next}}</span><span class="title">Modelos</span></a>
+</div>

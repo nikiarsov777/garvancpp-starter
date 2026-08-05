@@ -1,0 +1,26 @@
+<h1>Статические файлы</h1>
+<p>Crow регистрирует route на <code>/static/&lt;path&gt;</code>, который сервирует любой файл под директорией <code>static/</code> вашего проекта. Garvan наследует это бесплатно.</p>
+
+<h2 id="default">Стандартный static handler</h2>
+<p>Положите assets в <code>static/css/</code>, <code>static/js/</code> или <code>static/img/</code> и ссылайтесь на них в шаблонах:</p>
+
+<pre><code class="language-html">&lt;link rel="stylesheet" href="/static/css/app.css"&gt;
+&lt;script src="/static/js/bootstrap.min.js"&gt;&lt;/script&gt;
+&lt;img src="/static/img/logo.png"&gt;
+</code></pre>
+
+<p>Handler устанавливает правильный <code>Content-Type</code> на основе расширения файла и поддерживает <code>Range</code> запросы.</p>
+
+<h2 id="customizing">Персонализация</h2>
+<p>Директория и URL prefix определяются как compile-time макросы в <code>vendors/Garvan/crow/settings.h</code>:</p>
+
+<pre><code class="language-cpp">#define CROW_STATIC_DIRECTORY "static/"
+#define CROW_STATIC_ENDPOINT  "/static/&lt;path&gt;"
+</code></pre>
+
+<p>Override их до include <code>crow.h</code> если нужны другие defaults. Для per-blueprint static директорий см. <a href="/guides/blueprints">Blueprints</a>.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/ssl"><span class="label">{{t_prev}}</span><span class="title">SSL</span></a>
+    <a class="next" href="/guides/blueprints"><span class="label">{{t_next}}</span><span class="title">Blueprints</span></a>
+</div>

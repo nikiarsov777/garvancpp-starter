@@ -1,0 +1,65 @@
+<h1>İlk uygulamanız</h1>
+<p>Mümkün olan en küçük Garvan programı sadece birkaç satır C++'tır. Her parçanın ne yaptığından geçelim.</p>
+
+<h2 id="include">1. Include</h2>
+<p>Boş bir <code>main.cpp</code> ile başlayın ve Garvan ile paketlenmiş Crow header'ını dahil edin:</p>
+
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+</code></pre>
+
+<p>Bu tek header <code>crow::SimpleApp</code>, routing macro'ları, JSON değer tiplerini ve mustache template engine'i açar.</p>
+
+<h2 id="app-declaration">2. App bildirimi</h2>
+<p><code>main()</code> içinde bir Crow uygulaması bildirin:</p>
+
+<pre><code class="language-cpp">int main()
+{
+    crow::SimpleApp app;
+}
+</code></pre>
+
+<p><code>SimpleApp</code> HTTP sunucusunu, router'ı ve logger'ı tutar. Uygulama seviyesinde bağlı middleware'lere ihtiyacınız olduğunda <code>crow::App&lt;M1, M2, ...&gt;</code> kullanın &mdash; <a href="/guides/middleware">middleware kılavuzuna</a> bakın.</p>
+
+<h2 id="adding-routes">3. Route ekleme</h2>
+<p>Bir route, bir URL desenini bir handler'a bağlar. <code>CROW_ROUTE</code> macro'su en yaygın yoldur:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/")([] {
+    return "Hello from Garvan!";
+});
+</code></pre>
+
+<p>Lambda, bir istemci <code>GET /</code> istediğinde çağrılır. Bir <code>std::string</code> döndürmek onu yanıt gövdesi olarak geri gönderir.</p>
+
+<h2 id="running">4. Uygulamayı çalıştırma</h2>
+<p>Bir port seçin ve sunucuyu başlatın:</p>
+
+<pre><code class="language-cpp">app.port(9090).multithreaded().run();
+</code></pre>
+
+<p><code>multithreaded()</code> Crow'a CPU core başına bir worker kullanmasını söyler. <code>run()</code> süreç sonlanana kadar bloke eder; sunucuyla birlikte başka iş yapmanız gerekiyorsa <code>run_async()</code> kullanın.</p>
+
+<h2 id="full-example">Tam örnek</h2>
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+
+int main()
+{
+    crow::SimpleApp app;
+
+    CROW_ROUTE(app, "/")([] {
+        return "Hello from Garvan!";
+    });
+
+    app.port(9090).multithreaded().run();
+}
+</code></pre>
+
+<p>Derleyin ve <a href="http://localhost:9090">http://localhost:9090</a>'ı ziyaret edin &mdash; tarayıcınızda selamı görmelisiniz.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/getting_started/project_templates">
+        <span class="label">{{t_prev}}</span><span class="title">Proje şablonları</span>
+    </a>
+    <a class="next" href="/getting_started/a_simple_webpage">
+        <span class="label">{{t_next}}</span><span class="title">Basit bir web sayfası</span>
+    </a>
+</div>

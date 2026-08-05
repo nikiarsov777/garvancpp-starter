@@ -1,0 +1,68 @@
+<h1>Şablonlar (Mustache)</h1>
+<p>Garvan Crow'un mustache implementasyonunu sergiler. Model kasıtlı olarak basittir: bir şablon dosyası artı bir context nesnesi render edilmiş HTML'e eşittir.</p>
+
+<h2 id="components">Bileşenler</h2>
+<p>Her render iki parça içerir:</p>
+<ul>
+    <li><strong>Page</strong> &mdash; diskteki bir dosya, bir <code>crow::mustache::template_t</code>'e yüklenir.</li>
+    <li><strong>Context</strong> &mdash; şablonun etiketleri tarafından referans verilen değerleri taşıyan bir <code>crow::mustache::context</code> (<code>crow::json::wvalue</code> için alias).</li>
+</ul>
+
+<h2 id="page">Page</h2>
+<p>Şablonlar bir base dizin altında yaşar. Başlangıçta bir kez ayarlayın:</p>
+
+<pre><code class="language-cpp">crow::mustache::set_global_base("public/");
+</code></pre>
+
+<p>Sonra o base'e göre dosyaları yükleyin:</p>
+
+<pre><code class="language-cpp">auto page = crow::mustache::load("welcome.html");
+auto text = crow::mustache::load_text("static_snippet.html"); // parse yok
+</code></pre>
+
+<p>Loader path'i sanitize eder; bunu kesinlikle atlamanız gerekirse (genellikle gerekmez), <code>load_unsafe</code> kullanın.</p>
+
+<h2 id="context">Context</h2>
+<p>Sayfanın ihtiyaç duyduğu verilerle bir context oluşturun:</p>
+
+<pre><code class="language-cpp">crow::mustache::context ctx;
+ctx["title"]   = "Welcome";
+ctx["user"]    = "Ada";
+ctx["items"]   = crow::json::wvalue::list({ "one", "two", "three" });
+ctx["greet"]   = [](std::string) { return std::string("Hello there!"); };
+</code></pre>
+
+<p>Lambda'lara izin verilir ve kendileri mustache etiketleri içeren string'ler döndürebilir &mdash; engine parse etmeye devam eder.</p>
+
+<h2 id="partials">Partial'lar</h2>
+<p><code>&#123;&#123;&gt; partial.html &#125;&#125;</code> sözdizimi ile parçaları yeniden kullanın. Path yine global base'e görelidir. Okuduğunuz docs sitesi top nav, sidebar, TOC ve footer için partial'lar kullanır.</p>
+
+<pre><code class="language-html">&lt;body&gt;
+    &#123;&#123;&gt; topnav.html &#125;&#125;
+    &lt;main&gt;&#123;&#123;&amp; content&#125;&#125;&lt;/main&gt;
+    &#123;&#123;&gt; footer.html &#125;&#125;
+&lt;/body&gt;
+</code></pre>
+
+<h2 id="returning">Bir şablon döndürme</h2>
+<p>Sayfayı context ile render edin ve sonucu döndürün:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/welcome/&lt;string&gt;")([](std::string name) {
+    auto page = crow::mustache::load("welcome.html");
+    crow::mustache::context ctx;
+    ctx["user"] = name;
+    return page.render(ctx);
+});
+</code></pre>
+
+<p><code>page.render(ctx)</code> <code>Content-Type</code>'ı <code>text/html</code>'e ayarlanmış bir <code>crow::returnable</code> döndürür. Düz bir <code>std::string</code>'e sahip olmayı tercih ederseniz <code>render_string(ctx)</code> kullanın &mdash; örneğin sonucu başka bir şablon içine gömmek istediğinizde.</p>
+
+<div class="admonition tip">
+    <div class="admonition-title">İpucu</div>
+    <p>Şablonunuzun edebi <code>&#123;&#123;</code> içermesi gerekiyorsa (örneğin bu sayfa için bir kod örneği), onları HTML entity'leri <code>&amp;#123;&amp;#123;</code> ile escape edin.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/json"><span class="label">{{t_prev}}</span><span class="title">JSON</span></a>
+    <a class="next" href="/guides/multipart"><span class="label">{{t_next}}</span><span class="title">Multipart</span></a>
+</div>

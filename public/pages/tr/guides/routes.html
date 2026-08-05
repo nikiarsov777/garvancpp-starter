@@ -1,0 +1,63 @@
+<h1>Rotalar</h1>
+<p>Bir route, HTTP metodu + URL desenini bir handler'a bağlar. Garvan Crow'un compile-time router'ını miras alır, bu router route tanımlarınızdan bir karar ağacı oluşturur &mdash; aramalar O(log&nbsp;n)'dir ve regex yoktur.</p>
+
+<h2 id="macro">CROW_ROUTE macro'su</h2>
+<p>Bir route bildirmenin kanonik yolu:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/hello")([] {
+    return "hi";
+});
+</code></pre>
+
+<p>Runtime'da path oluşturmanız gerekirse <code>app.route_dynamic("/hello")</code>'i de kullanabilirsiniz, ancak macro biçimi compile-time'da kontrol edildiği için tercih edilir.</p>
+
+<h2 id="url-parameters">URL parametreleri</h2>
+<p>Parametreleri açı parantezleri içine koyun ve onları handler'ınızın argümanları olarak kabul edin. Desteklenen tipler: <code>int</code>, <code>uint</code>, <code>double</code>, <code>string</code> ve <code>path</code>:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/users/&lt;int&gt;")([](int id) {
+    return std::to_string(id);
+});
+
+CROW_ROUTE(app, "/files/&lt;path&gt;")([](std::string rest) {
+    return "you requested: " + rest;
+});
+</code></pre>
+
+<h2 id="methods">HTTP metodları</h2>
+<p>Rotalar varsayılan olarak <code>GET</code>'tir. Ek verb'ler kaydetmek için <code>.methods(...)</code> kullanın:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/users")
+    .methods("GET"_method, "POST"_method)
+([](const crow::request &amp;req) {
+    if (req.method == crow::HTTPMethod::POST) {
+        return crow::response(201, "created");
+    }
+    return crow::response("user list");
+});
+</code></pre>
+
+<h2 id="handler">Handler</h2>
+<p>Bir handler sıfır veya daha fazla argüman alabilir. İlk argüman header'lara ve body'e erişmek için <code>const crow::request&amp;</code> olabilir; ikincisi cevabı artırımlı yazmak ve <code>res.end()</code>'ı kendiniz çağırmak istiyorsanız <code>crow::response&amp;</code> olabilir.</p>
+
+<h2 id="response">Response</h2>
+<p>Body için bir <code>std::string</code>, veya status code veya header'ları açıkça ayarlamanız gerektiğinde bir <code>crow::response</code> döndürün:</p>
+
+<pre><code class="language-cpp">return crow::response(404, "not found");
+</code></pre>
+
+<h2 id="catchall">Catchall route'ları</h2>
+<p>Başka hiçbir route eşleşmediğinde çalışan bir fallback tanımlamak için <code>CROW_CATCHALL_ROUTE(app)</code> kullanın. Şu an okuduğunuz docs sitesi bilinmeyen path'leri bir page index'e karşı çözmek için bir tane kullanıyor.</p>
+
+<pre><code class="language-cpp">CROW_CATCHALL_ROUTE(app)([](const crow::request &amp;req) {
+    return crow::response(404, "no such page: " + req.url);
+});
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/app">
+        <span class="label">{{t_prev}}</span><span class="title">App</span>
+    </a>
+    <a class="next" href="/guides/logging">
+        <span class="label">{{t_next}}</span><span class="title">Günlükleme</span>
+    </a>
+</div>

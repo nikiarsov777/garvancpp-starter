@@ -1,0 +1,35 @@
+<h1>Multipart</h1>
+<p>Los navegadores envían <code>multipart/form-data</code> cuando un formulario contiene inputs de archivo. Garvan parsea estas peticiones a través de <code>crow::multipart::message</code>.</p>
+
+<h2 id="reading">Leer multipart</h2>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/upload")
+    .methods("POST"_method)
+([](const crow::request &amp;req) {
+    crow::multipart::message msg(req);
+    for (const auto &amp;part : msg.parts) {
+        const std::string &amp;name = part.headers.at("Content-Disposition").params.at("name");
+        CROW_LOG_INFO &lt;&lt; name &lt;&lt; " = " &lt;&lt; part.body.substr(0, 64);
+    }
+    return crow::response(200, "received");
+});
+</code></pre>
+
+<h2 id="file-uploads">Subidas de archivo</h2>
+<p>El body de cada part contiene bytes crudos; escríbelo a disco:</p>
+
+<pre><code class="language-cpp">if (part.headers.at("Content-Disposition").params.count("filename")) {
+    std::ofstream out("/tmp/" + part.headers.at("Content-Disposition").params.at("filename"),
+                      std::ios::binary);
+    out &lt;&lt; part.body;
+}
+</code></pre>
+
+<div class="admonition warning">
+    <div class="admonition-title">Advertencia</div>
+    <p>Nunca confíes en el filename proporcionado por el cliente. Elimina separadores de path y valida contra un allow-list antes de escribir a disco.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/templating"><span class="label">{{t_prev}}</span><span class="title">Plantillas (Mustache)</span></a>
+    <a class="next" href="/guides/query_string"><span class="label">{{t_next}}</span><span class="title">Cadenas de consulta</span></a>
+</div>

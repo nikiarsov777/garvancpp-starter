@@ -1,0 +1,92 @@
+<h1>Instalação em Linux</h1>
+<p>Esta página guia-o pela instalação do Garvan e pela compilação do seu
+primeiro executável numa máquina Linux.</p>
+
+<h2 id="requirements">Requisitos</h2>
+<ul>
+    <li>Um compilador C++ com suporte a <strong>C++23</strong> (GCC 14+ ou Clang 18+).</li>
+    <li>CMake 3.20 ou posterior.</li>
+    <li>Headers de desenvolvimento do Asio (1.28 ou posterior).</li>
+    <li><code>libpq</code>, <code>libmysqlcppconn</code>, <code>libmongoc</code>, <code>libsqlite3</code>, <code>libmonetdb-mapi</code></li>
+    <li><code>libcurl</code> &mdash; transporte SMTP para <code>AppJobs::SendTestMail</code>; também usado pelos runtime verbs do <code>kalpasan</code>.</li>
+    <li>Opcional: OpenSSL para HTTPS, zlib para compressão.</li>
+</ul>
+
+<div class="admonition note">
+    <div class="admonition-title">Nota</div>
+    <p>O <code>libgarvan.a</code> incluído em <code>vendors/Garvan/</code> já liga o Crow internamente, portanto só precisa das bibliotecas de sistema listadas acima.</p>
+</div>
+
+<h2 id="install-libgarvan">Instalar libgarvan</h2>
+<p>A via mais rápida é clonar o repositório starter, que já traz <code>libgarvan.a</code>, os headers do Crow e um <code>CMakeLists.txt</code> a funcionar:</p>
+
+<pre><code class="language-bash">git clone https://github.com/nikiarsov777/garvan-starter.git my-app
+cd my-app
+</code></pre>
+
+<p>Em Debian/Ubuntu pode instalar os drivers de BD numa só vez:</p>
+
+<pre><code class="language-bash">sudo apt update
+sudo apt install -y \
+    build-essential cmake \
+    libasio-dev libssl-dev zlib1g-dev \
+    libcurl4-openssl-dev \
+    libpqxx-dev libmysqlcppconn-dev libsqlite3-dev \
+    libmongoc-dev libbson-dev
+</code></pre>
+
+<div class="admonition note">
+    <div class="admonition-title">libcurl auto-linked</div>
+    <p>O <code>CMakeLists.txt</code> do starter apanha o libcurl via
+    <code>find_package(CURL REQUIRED)</code> e liga
+    <code>CURL::libcurl</code> ao <code>app_bin</code>. Não é preciso
+    configuração manual depois de o pacote estar instalado.</p>
+</div>
+
+<h2 id="build-from-source">Compilar a partir do código fonte</h2>
+<p>Se quiser compilar o próprio Garvan (em vez de usar o archive incluído), clone a árvore de código e corra o CMake:</p>
+
+<pre><code class="language-bash">git clone https://github.com/nikiarsov777/garvancpp-starter.git
+cd garvan
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+sudo cmake --install build
+</code></pre>
+
+<h2 id="compile-your-project">Compilar o seu projeto</h2>
+<p>Adicione o seguinte ao <code>CMakeLists.txt</code> do seu projeto:</p>
+
+<pre><code class="language-cmake">cmake_minimum_required(VERSION 3.20)
+project(MyApp CXX)
+set(CMAKE_CXX_STANDARD 23)
+
+add_executable(my_app main.cpp)
+
+target_include_directories(my_app PRIVATE
+    vendors/Garvan
+    vendors/Garvan/include
+)
+
+target_link_libraries(my_app PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendors/Garvan/libgarvan.a
+    pthread
+)
+</code></pre>
+
+<p>Depois compile:</p>
+
+<pre><code class="language-bash">cmake -S . -B build
+cmake --build build
+./build/my_app
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/">
+        <span class="label">{{t_prev}}</span>
+        <span class="title">Início</span>
+    </a>
+    <a class="next" href="/getting_started/setup_macos">
+        <span class="label">{{t_next}}</span>
+        <span class="title">Instalação em macOS</span>
+    </a>
+</div>

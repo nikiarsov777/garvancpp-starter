@@ -1,0 +1,48 @@
+<h1>JSON</h1>
+<p>Garvan читает JSON через <code>crow::json::rvalue</code> и пишет через <code>crow::json::wvalue</code>. Также есть тонкая обёртка <code>JsonValue</code> в tools директории для использования вне request handlers.</p>
+
+<h2 id="reading">Чтение JSON</h2>
+<p>Парсинг входящего request body и доступ к полям по ключу:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/api/echo")
+    .methods("POST"_method)
+([](const crow::request &amp;req) {
+    auto body = crow::json::load(req.body);
+    if (!body) return crow::response(400, "invalid json");
+
+    std::string name = body["name"].s();
+    int         age  = body["age"].i();
+    return crow::response("hello " + name);
+});
+</code></pre>
+
+<p><code>load</code> возвращает falsy значение когда парсинг проваливается, так что всегда проверяйте перед доступом к полям.</p>
+
+<h2 id="writing">Запись JSON</h2>
+<p>Постройте <code>wvalue</code> и верните; Garvan устанавливает <code>Content-Type: application/json</code> автоматически.</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/api/user")([] {
+    crow::json::wvalue out;
+    out["id"]      = 42;
+    out["name"]    = "Ada";
+    out["roles"]   = crow::json::wvalue::list({ "admin", "editor" });
+    return out;
+});
+</code></pre>
+
+<h2 id="garvan-jsonvalue">JsonValue Garvan</h2>
+<p><code>JsonValue</code> (alias <code>json</code> внутри route headers) — тонкая обёртка, добавляющая несколько удобств для использования внутри сервисов. Например, <code>UserMysqlController</code> в поставляемом starter возвращает <code>JsonValue</code> из своего <code>index()</code>.</p>
+
+<pre><code class="language-cpp">#include "tools/JsonValue.h"
+using json = JsonValue;
+
+json users;
+users.append({ {"id", 1}, {"name", "Ada"} });
+users.append({ {"id", 2}, {"name", "Bo"} });
+return users;
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/logging"><span class="label">{{t_prev}}</span><span class="title">Логирование</span></a>
+    <a class="next" href="/guides/templating"><span class="label">{{t_next}}</span><span class="title">Шаблоны (Mustache)</span></a>
+</div>

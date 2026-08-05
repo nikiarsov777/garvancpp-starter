@@ -1,0 +1,37 @@
+<h1>Middleware</h1>
+<p>Bir middleware, app'ten akan her request ve response'u gözlemlemenize veya değiştirmenize izin verir &mdash; auth, günlükleme, CORS ve oturumlar tipik kullanım örnekleridir.</p>
+
+<h2 id="concept">Middleware nedir</h2>
+<p>Her middleware üç şeye sahip bir struct'tır: request başına bir <code>context</code>, route çalışmadan önce çağrılan bir <code>before_handle()</code> hook'u ve sonra çağrılan bir <code>after_handle()</code> hook'u.</p>
+
+<h2 id="writing">Bir middleware yazma</h2>
+<pre><code class="language-cpp">struct Timer
+{
+    struct context {
+        std::chrono::steady_clock::time_point start;
+    };
+
+    void before_handle(crow::request &amp;, crow::response &amp;, context &amp;ctx) {
+        ctx.start = std::chrono::steady_clock::now();
+    }
+
+    void after_handle(crow::request &amp;, crow::response &amp;res, context &amp;ctx) {
+        auto ms = std::chrono::duration_cast&lt;std::chrono::milliseconds&gt;(
+            std::chrono::steady_clock::now() - ctx.start).count();
+        res.set_header("X-Render-Time", std::to_string(ms) + "ms");
+    }
+};
+</code></pre>
+
+<h2 id="using">Middleware kullanma</h2>
+<p>Middleware'leri <code>crow::App</code>'a template argümanları olarak ekleyin:</p>
+
+<pre><code class="language-cpp">crow::App&lt;Timer&gt; app;
+</code></pre>
+
+<p>Bir handler içinde, context'inizi <code>app.get_context&lt;Timer&gt;(req)</code> ile alın.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/query_string"><span class="label">{{t_prev}}</span><span class="title">Sorgu dizeleri</span></a>
+    <a class="next" href="/guides/ssl"><span class="label">{{t_next}}</span><span class="title">SSL</span></a>
+</div>

@@ -1,0 +1,41 @@
+<h1>Migrações</h1>
+<p>Garvan traz uma ferramenta de migração independente chamada <code>garvan-migrate</code>. Lê ficheiros SQL ou JSON de <code>db/migrations/</code>, aplica-os por ordem de versão e regista o que já foi corrido numa tabela de tracking.</p>
+
+<h2 id="running">Correr migrações</h2>
+<pre><code class="language-bash">./vendors/Garvan/garvan-migrate up        # aplica migrações pendentes
+./vendors/Garvan/garvan-migrate down      # reverte a última migração aplicada
+./vendors/Garvan/garvan-migrate status    # mostra o que está pendente / aplicado
+</code></pre>
+
+<p>A ferramenta lê as suas definições de ligação do mesmo <code>.env</code> que a sua app usa.</p>
+
+<h2 id="writing">Escrever uma migração</h2>
+<p>Os nomes de ficheiro seguem <code>&lt;UTC YYYYMMDDhhmmss&gt;_&lt;description&gt;.sql</code>. Cada ficheiro tem duas secções, marcadas estilo dbmate:</p>
+
+<pre><code class="language-bash">-- migrate:up
+CREATE TABLE posts (
+    id          serial PRIMARY KEY,
+    title       text NOT NULL,
+    body        text,
+    user_id     integer REFERENCES users(id),
+    created_at  timestamp DEFAULT now()
+);
+
+-- migrate:down
+DROP TABLE posts;
+</code></pre>
+
+<p>Para variantes por backend acrescente <code>.&lt;dbtype&gt;</code> antes de <code>.sql</code> &mdash; por exemplo <code>20240501_create_posts.mysql.sql</code>.</p>
+
+<h2 id="rollback">Rollback</h2>
+<p>Cada <code>up</code> deve ter um <code>down</code> correspondente &mdash; a ferramenta recusa aplicar uma migração sem ele. <code>garvan-migrate down</code> corre-as em ordem inversa, uma de cada vez.</p>
+
+<div class="admonition note">
+    <div class="admonition-title">MongoDB</div>
+    <p>Para migrações MongoDB o corpo do ficheiro são um ou mais documentos JSON de topo. Cada um é enviado a <code>db.runCommand()</code> por ordem.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/services"><span class="label">{{t_prev}}</span><span class="title">Serviços</span></a>
+    <a class="next" href="/garvan/kalpasan"><span class="label">{{t_next}}</span><span class="title">Kalpasan CLI</span></a>
+</div>

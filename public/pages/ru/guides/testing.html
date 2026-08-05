@@ -1,0 +1,34 @@
+<h1>Написание тестов</h1>
+<p>Вы можете упражнять handlers напрямую без bind-инга на реальный порт. Crow позволяет вам вызывать <code>handle()</code> на synthetic request и инспектировать response.</p>
+
+<h2 id="unit-tests">Юнит-тесты</h2>
+<pre><code class="language-cpp">#include "crow.h"
+#include "doctest.h"
+
+TEST_CASE("hello returns greeting") {
+    crow::SimpleApp app;
+    CROW_ROUTE(app, "/")([] { return "hi"; });
+
+    crow::request req;
+    req.url = "/";
+    crow::response res;
+    app.handle(req, res);
+
+    CHECK(res.code == 200);
+    CHECK(res.body == "hi");
+}
+</code></pre>
+
+<h2 id="integration">Интеграционные тесты</h2>
+<p>Для end-to-end покрытия запустите app с <code>run_async()</code> и хитайте его libcurl или любым HTTP клиентом:</p>
+
+<pre><code class="language-cpp">auto handle = app.port(0).run_async();   // port 0 = auto-pick
+auto port   = app.port();                  // узнайте bound port
+// ... issue requests against http://localhost:port ...
+app.stop();
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/base64"><span class="label">{{t_prev}}</span><span class="title">Base64</span></a>
+    <a class="next" href="/guides/auth"><span class="label">{{t_next}}</span><span class="title">HTTP авторизация</span></a>
+</div>

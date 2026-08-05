@@ -1,0 +1,21 @@
+<h1>Blueprints</h1>
+<p>Um blueprint é um grupo de rotas que partilham um prefixo URL, uma base de templates ou um diretório estático. São úteis para dividir uma app grande em módulos &mdash; por exemplo um blueprint por versão de API.</p>
+
+<h2 id="creating">Criar um blueprint</h2>
+<pre><code class="language-cpp">crow::Blueprint api("api/v1", "static_v1", "templates_v1");
+
+CROW_BP_ROUTE(api, "/users")([] {
+    return "v1 users";
+});
+</code></pre>
+
+<h2 id="mounting">Montar na app</h2>
+<pre><code class="language-cpp">app.register_blueprint(api);
+</code></pre>
+
+<p>O prefixo do blueprint é adicionado ao início de cada rota dentro dele, portanto o handler acima responde a <code>GET /api/v1/users</code>.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/static"><span class="label">{{t_prev}}</span><span class="title">Ficheiros estáticos</span></a>
+    <a class="next" href="/guides/compression"><span class="label">{{t_next}}</span><span class="title">Compressão</span></a>
+</div>

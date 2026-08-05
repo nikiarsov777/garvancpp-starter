@@ -1,16 +1,120 @@
 <section class="home-hero">
     <img class="hero-logo" src="/static/img/garvan.png" alt="Garvan" />
     <h1>Garvan C++</h1>
-    <p class="lead">Hızlı ve kullanımı kolay bir C++ web framework'ü. Garvan, Crow'u bir ORM, migration'lar, model/controller/service katmanı ve komut satırı araç kutusu ile genişletir &mdash; böylece HTTP ve WebSocket servislerini C++'tan ayrılmadan teslim edebilirsiniz.</p>
+    <p class="lead">Hızlı, her şey dahil <strong>C++23</strong> web framework'ü. Garvan Crow'u ORM, göçler, gerçek SMTP mail job'lu event bus ve job queue, model/controller/service katmanı ve <code>kalpasan</code> CLI'sı ile genişletir &mdash; böylece HTTP, WebSocket ve arka plan işini C++'tan çıkmadan gönderirsiniz.</p>
     <div class="cta-row">
-        <a class="btn-primary-garvan" href="/getting_started/setup_linux">Başlayın</a>
-        <a class="btn-outline-garvan" href="/guides/app">Kılavuzlar</a>
+        <a class="btn-primary-garvan" href="/getting_started/setup_linux">Başla</a>
+        <a class="btn-outline-garvan" href="/guides/app">Kılavuzları oku</a>
+        <a class="btn-outline-garvan" href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
     </div>
 </section>
 
 <section class="feature-grid">
-    <div class="feature-card"><div class="icon">&#9889;</div><h3>Çok hızlı</h3><p>Crow'un yüksek performanslı çekirdeği üzerine kurulu.</p></div>
-    <div class="feature-card"><div class="icon">&#127760;</div><h3>Çoklu veritabanı</h3><p>PostgreSQL, MySQL, SQLite, MongoDB ve MonetDB.</p></div>
-    <div class="feature-card"><div class="icon">&#128296;</div><h3>Her şey dahil</h3><p>Mustache, JSON, query builder, migration, logger.</p></div>
-    <div class="feature-card"><div class="icon">&#128279;</div><h3>WebSockets</h3><p>Gerçek zamanlı çift yönlü iletişim.</p></div>
+    <div class="feature-card">
+        <div class="icon">&#9889;</div>
+        <h3>Şimşek gibi hızlı</h3>
+        <p>Crow'un yüksek performanslı çekirdeği üzerine inşa edildi &mdash; routing compile-time karar ağacıdır.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon">&#127760;</div>
+        <h3>Çoklu veritabanı</h3>
+        <p>PostgreSQL, MySQL, SQLite, MongoDB ve MonetDB için birinci sınıf sürücüler.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon">&#128296;</div>
+        <h3>Piller dahil</h3>
+        <p>Mustache şablonları, JSON, query builder, göçler, logger &mdash; kutudan çıkar çıkmaz.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon">&#128279;</div>
+        <h3>WebSockets</h3>
+        <p>HTTP ile aynı routing modeliyle gerçek zamanlı çift yönlü iletişim.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon">&#128231;</div>
+        <h3>Events &amp; Jobs</h3>
+        <p>Event'leri fire edin, job dispatch edin ve libcurl ile SMTP üzerinden gerçek HTML mail gönderin &mdash; hepsi in-process.</p>
+    </div>
+</section>
+
+<section class="code-feature">
+    <div>
+        <h2>8 satırda çalışır hale gelin</h2>
+        <p>Bir route tanımlayın, bir string döndürün, uygulamayı çalıştırın. Garvan yolunuzdan çekilir.</p>
+    </div>
+    <pre><code class="language-cpp">#include "crow.h"
+
+int main()
+{
+    crow::SimpleApp app;
+
+    CROW_ROUTE(app, "/")([]{
+        return "Hello from Garvan!";
+    });
+
+    app.port(9090).multithreaded().run();
+}</code></pre>
+</section>
+
+<section class="code-feature reverse">
+    <pre><code class="language-cpp">CROW_ROUTE(app, "/api/users/&lt;int&gt;")
+([](int id) {
+    crow::json::wvalue user;
+    user["id"]    = id;
+    user["name"]  = "Ada";
+    user["email"] = "ada@example.com";
+    return user;
+});</code></pre>
+    <div>
+        <h2>JSON, kolay yol</h2>
+        <p>Bir handler'dan <code>crow::json::wvalue</code> döndürün, Garvan sizin için doğru
+            <code>Content-Type</code>'ı ayarlar. Garvan'ın kendi <code>JsonValue</code>'su aynı
+            primitive'leri servisler ve modeller içinde kullanım için sarar.</p>
+    </div>
+</section>
+
+<section class="code-feature">
+    <div>
+        <h2>Tanıdık hissettiren bir ORM</h2>
+        <p>Akıcı bir query builder desteklenen backend'lerin herhangi biri için SQL yazar. Modeller
+            <code>OModel</code>'i genişletir ve <code>find()</code>, <code>where()</code> ve
+            ilişkileri sergiler.</p>
+    </div>
+    <pre><code class="language-cpp">auto users = db.table("users")
+    .where("active", "=", 1)
+    .order_by("created_at", "desc")
+    .limit(20)
+    .get();</code></pre>
+</section>
+
+<section>
+    <h2 id="install">Garvan'ı yükleyin</h2>
+    <div class="packages-grid">
+        <a href="/getting_started/setup_linux">
+            <span class="pkg-name">Linux</span>
+            <span class="pkg-desc">apt, AUR veya kaynaktan build</span>
+        </a>
+        <a href="/getting_started/setup_macos">
+            <span class="pkg-name">macOS</span>
+            <span class="pkg-desc">Homebrew veya manuel build</span>
+        </a>
+        <a href="/getting_started/setup_windows">
+            <span class="pkg-name">Windows</span>
+            <span class="pkg-desc">vcpkg veya MSVC</span>
+        </a>
+        <a href="/getting_started/project_templates">
+            <span class="pkg-name">Şablonlar</span>
+            <span class="pkg-desc">Starter proje scaffold'ları</span>
+        </a>
+    </div>
+</section>
+
+<section style="text-align:center; margin: 56px 0 24px;">
+    <h2>Garvan'ı öğren</h2>
+    <p>Setup kılavuzuyla başla, sonra ilk endpoint'ini kur.</p>
+    <div class="cta-row" style="display:flex; gap:12px; justify-content:center; margin-top: 16px;">
+        <a class="btn-primary-garvan" href="/getting_started/your_first_application">İlk uygulama</a>
+        <a class="btn-outline-garvan" href="/guides/app">Kılavuzlar</a>
+        <a class="btn-outline-garvan" href="/reference">API referansı</a>
+    </div>
 </section>

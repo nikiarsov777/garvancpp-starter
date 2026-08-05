@@ -1,0 +1,41 @@
+<h1>Göçler</h1>
+<p>Garvan <code>garvan-migrate</code> adında bağımsız bir migration aracı ile gelir. <code>db/migrations/</code>'dan SQL veya JSON dosyalarını okur, versiyon sırasına göre uygular ve zaten çalıştırılmış olanları bir tracking tablosunda kaydeder.</p>
+
+<h2 id="running">Göçleri çalıştırma</h2>
+<pre><code class="language-bash">./vendors/Garvan/garvan-migrate up        # bekleyen göçleri uygular
+./vendors/Garvan/garvan-migrate down      # son uygulanan göçü geri alır
+./vendors/Garvan/garvan-migrate status    # neyin bekleyen / uygulanmış olduğunu gösterir
+</code></pre>
+
+<p>Araç bağlantı ayarlarını uygulamanızın kullandığı aynı <code>.env</code>'den okur.</p>
+
+<h2 id="writing">Bir göç yazma</h2>
+<p>Dosya adları <code>&lt;UTC YYYYMMDDhhmmss&gt;_&lt;description&gt;.sql</code>'i takip eder. Her dosyanın dbmate tarzında işaretlenmiş iki bölümü vardır:</p>
+
+<pre><code class="language-bash">-- migrate:up
+CREATE TABLE posts (
+    id          serial PRIMARY KEY,
+    title       text NOT NULL,
+    body        text,
+    user_id     integer REFERENCES users(id),
+    created_at  timestamp DEFAULT now()
+);
+
+-- migrate:down
+DROP TABLE posts;
+</code></pre>
+
+<p>Backend başına varyantlar için <code>.sql</code>'den önce <code>.&lt;dbtype&gt;</code> ekleyin &mdash; örneğin <code>20240501_create_posts.mysql.sql</code>.</p>
+
+<h2 id="rollback">Rollback</h2>
+<p>Her <code>up</code>'ın eşleşen bir <code>down</code>'u olmalı &mdash; araç bunun olmadığı bir göçü uygulamayı reddeder. <code>garvan-migrate down</code> onları ters sırada, birer birer çalıştırır.</p>
+
+<div class="admonition note">
+    <div class="admonition-title">MongoDB</div>
+    <p>MongoDB göçleri için dosya gövdesi bir veya daha fazla üst düzey JSON belgesidir. Her biri sırayla <code>db.runCommand()</code>'e gönderilir.</p>
+</div>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/services"><span class="label">{{t_prev}}</span><span class="title">Servisler</span></a>
+    <a class="next" href="/garvan/kalpasan"><span class="label">{{t_next}}</span><span class="title">Kalpasan CLI</span></a>
+</div>

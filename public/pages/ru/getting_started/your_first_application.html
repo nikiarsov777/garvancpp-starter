@@ -1,0 +1,65 @@
+<h1>Ваше первое приложение</h1>
+<p>Минимальная Garvan программа — всего несколько строк C++. Пройдёмся по каждой части.</p>
+
+<h2 id="include">1. Include</h2>
+<p>Начните с пустого <code>main.cpp</code> и подключите Garvan-packaged Crow header:</p>
+
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+</code></pre>
+
+<p>Этот один header открывает <code>crow::SimpleApp</code>, routing макросы, JSON типы значений и mustache template engine.</p>
+
+<h2 id="app-declaration">2. Объявление приложения</h2>
+<p>Объявите Crow приложение внутри <code>main()</code>:</p>
+
+<pre><code class="language-cpp">int main()
+{
+    crow::SimpleApp app;
+}
+</code></pre>
+
+<p><code>SimpleApp</code> держит HTTP сервер, router и logger. Используйте <code>crow::App&lt;M1, M2, ...&gt;</code> если нужны middleware на уровне приложения &mdash; см. <a href="/guides/middleware">руководство по middleware</a>.</p>
+
+<h2 id="adding-routes">3. Добавление routes</h2>
+<p>Route связывает URL шаблон с handler-ом. Макрос <code>CROW_ROUTE</code> — самый распространённый способ:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/")([] {
+    return "Hello from Garvan!";
+});
+</code></pre>
+
+<p>Lambda вызывается при каждом клиентском запросе <code>GET /</code>. Возврат <code>std::string</code> отправляет её как response body.</p>
+
+<h2 id="running">4. Запуск</h2>
+<p>Выберите порт и стартуйте сервер:</p>
+
+<pre><code class="language-cpp">app.port(9090).multithreaded().run();
+</code></pre>
+
+<p><code>multithreaded()</code> говорит Crow использовать один worker на CPU core. <code>run()</code> блокирует пока процесс не завершится; используйте <code>run_async()</code> если нужно делать другую работу параллельно с сервером.</p>
+
+<h2 id="full-example">Полный пример</h2>
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+
+int main()
+{
+    crow::SimpleApp app;
+
+    CROW_ROUTE(app, "/")([] {
+        return "Hello from Garvan!";
+    });
+
+    app.port(9090).multithreaded().run();
+}
+</code></pre>
+
+<p>Соберите и откройте <a href="http://localhost:9090">http://localhost:9090</a> &mdash; вы должны увидеть приветствие в браузере.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/getting_started/project_templates">
+        <span class="label">{{t_prev}}</span><span class="title">Шаблоны проектов</span>
+    </a>
+    <a class="next" href="/getting_started/a_simple_webpage">
+        <span class="label">{{t_next}}</span><span class="title">Простая веб-страница</span>
+    </a>
+</div>

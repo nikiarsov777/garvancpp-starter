@@ -1,0 +1,26 @@
+<h1>Ficheiros estáticos</h1>
+<p>Crow regista uma rota em <code>/static/&lt;path&gt;</code> que serve qualquer ficheiro sob o diretório <code>static/</code> do seu projeto. Garvan herda isto de graça.</p>
+
+<h2 id="default">O handler estático por defeito</h2>
+<p>Coloque assets em <code>static/css/</code>, <code>static/js/</code> ou <code>static/img/</code> e referencie-os nos seus templates:</p>
+
+<pre><code class="language-html">&lt;link rel="stylesheet" href="/static/css/app.css"&gt;
+&lt;script src="/static/js/bootstrap.min.js"&gt;&lt;/script&gt;
+&lt;img src="/static/img/logo.png"&gt;
+</code></pre>
+
+<p>O handler define um <code>Content-Type</code> correto com base na extensão do ficheiro e suporta pedidos <code>Range</code>.</p>
+
+<h2 id="customizing">Personalização</h2>
+<p>O diretório e o prefixo URL são definidos como macros de compile-time em <code>vendors/Garvan/crow/settings.h</code>:</p>
+
+<pre><code class="language-cpp">#define CROW_STATIC_DIRECTORY "static/"
+#define CROW_STATIC_ENDPOINT  "/static/&lt;path&gt;"
+</code></pre>
+
+<p>Sobrescreva-os antes de incluir <code>crow.h</code> se precisar de defaults diferentes. Para diretórios estáticos por blueprint, ver <a href="/guides/blueprints">Blueprints</a>.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/ssl"><span class="label">{{t_prev}}</span><span class="title">SSL</span></a>
+    <a class="next" href="/guides/blueprints"><span class="label">{{t_next}}</span><span class="title">Blueprints</span></a>
+</div>

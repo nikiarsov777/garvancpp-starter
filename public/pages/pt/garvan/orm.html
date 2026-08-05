@@ -1,0 +1,51 @@
+<h1>ORM / Query Builder</h1>
+<p>A camada de dados do Garvan tem duas peças. <code>Builder</code> gera statements parametrizados através de um <code>Grammar</code> por base de dados, depois corre-os através de um <code>DbClient</code>. <code>OModel</code> é a classe base que os seus objetos modelo estendem para expor esses métodos do builder diretamente.</p>
+
+<h2 id="builder">Builder</h2>
+<p>O builder usa uma API fluente. Cada chamada devolve o builder para que possa encadear condições:</p>
+
+<pre><code class="language-cpp">Builder qb(dbClient, grammar, "users",
+           /*public*/{"id","name","email"},
+           /*private*/{"password"});
+
+auto rows = qb
+    .where("active", "=", "1")
+    ->where("role", "=", "admin")
+    ->get();
+</code></pre>
+
+<p>A consulta é parametrizada de ponta a ponta &mdash; valores fornecidos pelo utilizador fluem por binding nativo de <code>PreparedStatement</code> em vez de concatenação de strings. SQL injection não está em cima da mesa.</p>
+
+<p>Outros shortcuts: <code>first()</code>, <code>firstOrFail()</code>, <code>find(id)</code>, <code>findOrFail(id)</code>, mais <code>insert(json)</code>, <code>update(json)</code> e <code>remove()</code>.</p>
+
+<h2 id="omodel">OModel</h2>
+<p>Os modelos estendem <code>ORM::OModel</code> e declaram o seu nome de tabela e listas de colunas:</p>
+
+<pre><code class="language-cpp">class User : public ORM::OModel
+{
+public:
+    User() {
+        table          = "users";
+        primaryKey     = "id";
+        public_columns  = {"id", "name", "email"};
+        private_columns = {"password"};
+    }
+};
+</code></pre>
+
+<h2 id="grammars">Grammars por base de dados</h2>
+<p>Cada driver fornece uma subclasse <code>Grammar</code> que sabe como emitir o dialeto correto:</p>
+<ul>
+    <li><code>PostgresGrammar</code></li>
+    <li><code>MysqlGrammar</code></li>
+    <li><code>SqliteGrammar</code></li>
+    <li><code>MonetdbGrammar</code></li>
+    <li><code>MongoGrammar</code> &mdash; produz comandos Mongo em vez de SQL.</li>
+</ul>
+
+<p>O grammar correto é escolhido automaticamente a partir de <code>DATABASE_TYPE</code>. Normalmente não vai tocar nestas classes diretamente.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/env"><span class="label">{{t_prev}}</span><span class="title">Configuração .env</span></a>
+    <a class="next" href="/garvan/models"><span class="label">{{t_next}}</span><span class="title">Modelos</span></a>
+</div>

@@ -1,0 +1,26 @@
+<h1>Sorgu dizeleri</h1>
+<p>Bir URL'deki <code>?</code>'den sonraki her şey otomatik olarak parse edilir. <code>req.url_params</code> aracılığıyla erişin.</p>
+
+<h2 id="basic">Temel kullanım</h2>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/search")([](const crow::request &amp;req) {
+    const char *q = req.url_params.get("q");
+    if (!q) return crow::response(400, "missing q");
+    return crow::response("you searched for: " + std::string(q));
+});
+</code></pre>
+
+<p><code>get()</code> anahtar yoksa bir <code>const char*</code> veya <code>nullptr</code> döndürür &mdash; dereference etmeden önce her zaman kontrol edin.</p>
+
+<h2 id="multiple-values">Birden fazla değer</h2>
+<p>Listeler <code>?tag=a&amp;tag=b</code> olarak yazılır:</p>
+
+<pre><code class="language-cpp">auto tags = req.url_params.get_list("tag");
+for (const auto &amp;t : tags) CROW_LOG_INFO &lt;&lt; "tag: " &lt;&lt; t;
+</code></pre>
+
+<p><code>application/x-www-form-urlencoded</code> body'ler için (HTML formları için tipik), <code>req.get_body_params()</code>'i çağırın &mdash; API aynıdır.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/guides/multipart"><span class="label">{{t_prev}}</span><span class="title">Multipart</span></a>
+    <a class="next" href="/guides/middleware"><span class="label">{{t_next}}</span><span class="title">Middleware</span></a>
+</div>

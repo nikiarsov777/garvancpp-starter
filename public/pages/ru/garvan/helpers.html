@@ -1,0 +1,31 @@
+<h1>Утилиты</h1>
+<p>Три небольших utility класса живут под <code>vendors/Garvan/include/tools/</code>. Встретите их при написании controllers и services.</p>
+
+<h2 id="helper">Helper</h2>
+<p>Класс <code>Helper</code> — база обоих <code>BaseContoller</code> и <code>BaseService</code>. Предоставляет convenience методы, которые не подходят никуда ещё &mdash; форматирование дат, генерация slug, построение response.</p>
+
+<pre><code class="language-cpp">#include "tools/Helper.h"
+
+std::string slug = Helper::slug("Hello, World!"); // "hello-world"
+</code></pre>
+
+<h2 id="jsonvalue">JsonValue</h2>
+<p>Обёртка вокруг <code>crow::json::wvalue</code> с helper-ами для nested объектов и массивов. Используйте как return type для service и controller методов:</p>
+
+<pre><code class="language-cpp">#include "tools/JsonValue.h"
+using json = JsonValue;
+
+json out;
+out["status"] = "ok";
+out["data"]   = json::Array();
+out["data"].append({ {"id", 1}, {"name", "Ada"} });
+return out;
+</code></pre>
+
+<h2 id="logger">Logger</h2>
+<p>Уже покрыт на странице <a href="/guides/logging">Логирование</a>. Используйте когда нужно залогировать что-то из места, где Crow logger недоступен.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/databases"><span class="label">{{t_prev}}</span><span class="title">Драйверы БД</span></a>
+    <a class="next" href="/reference"><span class="label">{{t_next}}</span><span class="title">Справочник API</span></a>
+</div>

@@ -3,15 +3,15 @@
 
 <h2 id="requirements">Изисквания</h2>
 <ul>
-    <li>Visual Studio 2019 или по-нов, с пакета „Desktop development with C++".</li>
+    <li>Visual Studio 2022 (17.5+) с пакета „Desktop development with C++" &mdash; необходим за <strong>C++23</strong> support.</li>
     <li>CMake 3.20 (включен във Visual Studio).</li>
-    <li>vcpkg или предварително компилирани binary-та за Asio, OpenSSL и клиентите на базите данни.</li>
+    <li>vcpkg или предварително компилирани binary-та за Asio, OpenSSL, libcurl и клиентите на базите данни.</li>
 </ul>
 
 <h2 id="vcpkg">С vcpkg</h2>
 <pre><code class="language-bash">git clone https://github.com/microsoft/vcpkg.git
 .\vcpkg\bootstrap-vcpkg.bat
-.\vcpkg\vcpkg install asio openssl zlib libpqxx sqlite3
+.\vcpkg\vcpkg install asio openssl zlib curl libpqxx sqlite3
 </code></pre>
 
 <h2 id="msvc">Компилация с MSVC</h2>

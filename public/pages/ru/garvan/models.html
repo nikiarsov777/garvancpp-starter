@@ -1,0 +1,41 @@
+<h1>Модели</h1>
+<p>Модель представляет одну таблицу БД. Она несёт метаданные (имя таблицы, primary key, колонки) и наследует query-builder методы от <code>ORM::OModel</code>.</p>
+
+<h2 id="base-model">BaseModel</h2>
+<p>Разместите модели под <code>app/models/</code>. Минимальная модель:</p>
+
+<pre><code class="language-cpp">// app/models/Post.h
+#pragma once
+#include "orm/omodel.h"
+
+class Post : public ORM::OModel
+{
+public:
+    Post() {
+        table          = "posts";
+        primaryKey     = "id";
+        public_columns  = {"id", "title", "body", "user_id", "created_at"};
+        private_columns = {};
+    }
+};
+</code></pre>
+
+<h2 id="relations">Связи</h2>
+<p><code>Builder</code> предоставляет четыре relation helper-а, которые <code>OModel</code> наследует:</p>
+<ul>
+    <li><code>hasOne(model, foreignKey, localKey)</code></li>
+    <li><code>hasMany(model, foreignKey, ownerKey)</code></li>
+    <li><code>belongsTo(model, foreignKey, ownerKey)</code></li>
+    <li><code>belongsToMany(model, pivotTable, foreignKey, ownerKey)</code></li>
+</ul>
+
+<p>Каждый из них планирует join, который resolve-ится при вызове <code>get()</code>. Они зеркалируют relation API, который вы можете знать из Laravel.</p>
+
+<pre><code class="language-cpp">User u;
+auto posts = u.find(42).hasMany(Post{}, "user_id", "id").get();
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/orm"><span class="label">{{t_prev}}</span><span class="title">ORM / Query Builder</span></a>
+    <a class="next" href="/garvan/controllers"><span class="label">{{t_next}}</span><span class="title">Контроллеры</span></a>
+</div>

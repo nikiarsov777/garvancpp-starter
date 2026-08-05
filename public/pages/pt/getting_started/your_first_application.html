@@ -1,0 +1,65 @@
+<h1>A sua primeira aplicação</h1>
+<p>O programa Garvan mais pequeno possível são apenas algumas linhas de C++. Vamos ver o que cada parte faz.</p>
+
+<h2 id="include">1. Include</h2>
+<p>Comece com um <code>main.cpp</code> vazio e inclua o header Crow empacotado com Garvan:</p>
+
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+</code></pre>
+
+<p>Este único header expõe <code>crow::SimpleApp</code>, as macros de routing, os tipos de valor JSON e o motor de templates mustache.</p>
+
+<h2 id="app-declaration">2. Declaração da app</h2>
+<p>Declare uma aplicação Crow dentro de <code>main()</code>:</p>
+
+<pre><code class="language-cpp">int main()
+{
+    crow::SimpleApp app;
+}
+</code></pre>
+
+<p><code>SimpleApp</code> contém o servidor HTTP, o router e o logger. Use <code>crow::App&lt;M1, M2, ...&gt;</code> quando precisar de middlewares ligados ao nível da aplicação &mdash; ver o <a href="/guides/middleware">guia de middleware</a>.</p>
+
+<h2 id="adding-routes">3. Adicionar routes</h2>
+<p>Um route liga um padrão URL a um handler. A macro <code>CROW_ROUTE</code> é a forma mais comum:</p>
+
+<pre><code class="language-cpp">CROW_ROUTE(app, "/")([] {
+    return "Hello from Garvan!";
+});
+</code></pre>
+
+<p>A lambda é chamada sempre que um cliente pede <code>GET /</code>. Devolver uma <code>std::string</code> envia-a de volta como corpo da resposta.</p>
+
+<h2 id="running">4. Executar a app</h2>
+<p>Escolha uma porta e inicie o servidor:</p>
+
+<pre><code class="language-cpp">app.port(9090).multithreaded().run();
+</code></pre>
+
+<p><code>multithreaded()</code> diz ao Crow para usar um worker por core CPU. <code>run()</code> bloqueia até o processo terminar; use <code>run_async()</code> se precisar de fazer outro trabalho em paralelo com o servidor.</p>
+
+<h2 id="full-example">Exemplo completo</h2>
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+
+int main()
+{
+    crow::SimpleApp app;
+
+    CROW_ROUTE(app, "/")([] {
+        return "Hello from Garvan!";
+    });
+
+    app.port(9090).multithreaded().run();
+}
+</code></pre>
+
+<p>Compile e visite <a href="http://localhost:9090">http://localhost:9090</a> &mdash; deverá ver a saudação no seu browser.</p>
+
+<div class="page-nav">
+    <a class="prev" href="/getting_started/project_templates">
+        <span class="label">{{t_prev}}</span><span class="title">Modelos de projeto</span>
+    </a>
+    <a class="next" href="/getting_started/a_simple_webpage">
+        <span class="label">{{t_next}}</span><span class="title">Uma página web simples</span>
+    </a>
+</div>
