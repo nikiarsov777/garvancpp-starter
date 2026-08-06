@@ -1,9 +1,11 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unistd.h>
 
 #include "vendors/Garvan/crow.h"
 #include "vendors/Garvan/include/tools/Helper.h"
@@ -23,6 +25,34 @@ using namespace Routes;
 
 int main()
 {
+   // --- CWD fix ------------------------------------------------------------
+   // Прави binary-то независимо от директорията, от която е стартирано.
+   // Резолвира абсолютния път на изпълнимия файл и сменя CWD на project root
+   // (parent на bin/), за да работят коректно всички релативни пътища:
+   //   - crow::mustache::set_global_base("public/")
+   //   - DocsRouter четенето на public/pages/<lang>/...
+   //   - Crow static handler (static/)
+   //   - .env loader
+   {
+      char buf[4096];
+      ssize_t len = ::readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+      if (len == -1) {
+         std::cerr << "FATAL: cannot resolve executable path via /proc/self/exe\n";
+         return EXIT_FAILURE;
+      }
+      buf[len] = '\0';
+      try {
+         std::filesystem::path exePath(buf);
+         // exePath = <root>/bin/app.bin  =>  project root = parent.parent
+         std::filesystem::path projectRoot = exePath.parent_path().parent_path();
+         std::filesystem::current_path(projectRoot);
+      } catch (const std::exception &e) {
+         std::cerr << "FATAL: cannot change working directory: " << e.what() << "\n";
+         return EXIT_FAILURE;
+      }
+   }
+   // -----------------------------------------------------------------------
+
    // --- APP_KEY guard ------------------------------------------------------
    // Refuse to start if APP_KEY is missing, empty, or whitespace-only.
    // Try the framework's .env loader first, then fall back to the process env.
@@ -62,6 +92,12 @@ int main()
 
    crow::SimpleApp *app = new crow::SimpleApp();
    crow::mustache::set_global_base("public/");
+   // CatchallRule и WebSocket handler-ите не sync-ват per-request base с
+   // global base (за разлика от TaggedRule/DynamicRule), затова explicit-но
+   // сетваме и per-request base, иначе `mustache::load` използва default
+   // "templates/" и връща празен template → бял екран за catchall route-и
+   // като /garvan/orm.
+   crow::mustache::set_base("public/");
 
    ApiRoutes  apiRoutes(*app);
    WebRoutes  webRoutes(*app);
