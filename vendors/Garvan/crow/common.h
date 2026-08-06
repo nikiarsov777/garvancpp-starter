@@ -325,7 +325,9 @@ constexpr crow::HTTPMethod method_from_string(const char* str)
                                                            throw std::runtime_error("invalid http method");
 }
 
-constexpr crow::HTTPMethod operator"" _method(const char* str, size_t /*len*/)
+// LOCAL PATCH: no space between "" and suffix (C++23 deprecates the
+// whitespace form; -Wdeprecated-literal-operator).
+constexpr crow::HTTPMethod operator""_method(const char* str, size_t /*len*/)
 {
     return method_from_string( str );
 }

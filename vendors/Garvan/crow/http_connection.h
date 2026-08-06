@@ -370,10 +370,14 @@ namespace crow
 
         void do_write_static()
         {
+            // LOCAL PATCH: use ec-returning boost::asio::write so EPIPE /
+            // ECONNRESET from a client disconnect doesn't throw up into
+            // routing.h and get logged as "An uncaught exception occurred".
             is_writing = true;
-            boost::asio::write(adaptor_.socket(), buffers_);
+            boost::system::error_code ec;
+            boost::asio::write(adaptor_.socket(), buffers_, ec);
 
-            if (res.file_info.statResult == 0)
+            if (!ec && res.file_info.statResult == 0)
             {
                 std::ifstream is(res.file_info.path.c_str(), std::ios::in | std::ios::binary);
                 std::vector<boost::asio::const_buffer> buffers{1};
@@ -382,12 +386,17 @@ namespace crow
                 while (is.gcount() > 0)
                 {
                     buffers[0] = boost::asio::buffer(buf, is.gcount());
-                    do_write_sync(buffers);
+                    boost::asio::write(adaptor_.socket(), buffers, ec);
+                    if (ec) break;
                     is.read(buf, sizeof(buf));
                 }
             }
+            if (ec)
+            {
+                CROW_LOG_DEBUG << this << " client closed during static write: " << ec.message();
+            }
             is_writing = false;
-            if (close_connection_)
+            if (ec || close_connection_)
             {
                 adaptor_.shutdown_readwrite();
                 adaptor_.close();
@@ -419,33 +428,41 @@ namespace crow
             }
             else
             {
+                // LOCAL PATCH: ec-returning writes; bail out cleanly on
+                // client-disconnect (EPIPE / ECONNRESET) instead of throwing
+                // up into routing.h's outer catch.
                 is_writing = true;
-                boost::asio::write(adaptor_.socket(), buffers_); // Write the response start / headers
-                if (res.body.length() > 0)
+                boost::system::error_code ec;
+                boost::asio::write(adaptor_.socket(), buffers_, ec); // Write the response start / headers
+                if (!ec && res.body.length() > 0)
                 {
                     std::string buf;
                     std::vector<asio::const_buffer> buffers;
 
-                    while (res.body.length() > 16384)
+                    while (!ec && res.body.length() > 16384)
                     {
-                        //buf.reserve(16385);
                         buf = res.body.substr(0, 16384);
                         res.body = res.body.substr(16384);
                         buffers.clear();
                         buffers.push_back(boost::asio::buffer(buf));
-                        do_write_sync(buffers);
+                        boost::asio::write(adaptor_.socket(), buffers, ec);
                     }
-                    // Collect whatever is left (less than 16KB) and send it down the socket
-                    // buf.reserve(is.length());
-                    buf = res.body;
-                    res.body.clear();
-
-                    buffers.clear();
-                    buffers.push_back(boost::asio::buffer(buf));
-                    do_write_sync(buffers);
+                    if (!ec)
+                    {
+                        // Collect whatever is left (less than 16KB) and send it down the socket
+                        buf = res.body;
+                        res.body.clear();
+                        buffers.clear();
+                        buffers.push_back(boost::asio::buffer(buf));
+                        boost::asio::write(adaptor_.socket(), buffers, ec);
+                    }
+                }
+                if (ec)
+                {
+                    CROW_LOG_DEBUG << this << " client closed during response write: " << ec.message();
                 }
                 is_writing = false;
-                if (close_connection_)
+                if (ec || close_connection_)
                 {
                     adaptor_.shutdown_readwrite();
                     adaptor_.close();
@@ -539,20 +556,19 @@ namespace crow
 
         inline void do_write_sync(std::vector<asio::const_buffer>& buffers)
         {
-
-            boost::asio::write(adaptor_.socket(), buffers, [&](std::error_code ec, std::size_t) {
-                if (!ec)
-                {
-                    return false;
-                }
-                else
-                {
-                    CROW_LOG_ERROR << ec << " - happened while sending buffers";
-                    CROW_LOG_DEBUG << this << " from write (sync)(2)";
-                    check_destroy();
-                    return true;
-                }
-            });
+            // LOCAL PATCH: the original code passed a lambda as the 3rd arg
+            // to boost::asio::write(stream, buffers, CompletionCondition).
+            // Boost treated it as a completion-condition predicate, NOT an
+            // error handler, so I/O errors kept propagating as exceptions.
+            // Use the ec-returning overload; downgrade to DEBUG because
+            // EPIPE from a client disconnect is normal, not a server error.
+            boost::system::error_code ec;
+            boost::asio::write(adaptor_.socket(), buffers, ec);
+            if (ec)
+            {
+                CROW_LOG_DEBUG << this << " " << ec.message() << " - client closed during sync write";
+                check_destroy();
+            }
         }
 
         void check_destroy()
