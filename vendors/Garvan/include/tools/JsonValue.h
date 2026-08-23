@@ -2,10 +2,14 @@
 #define JSONVALUE_H
 #pragma once
 #include <string>
+#include <string_view>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 #include <variant>
 #include <memory>
+#include <cctype>
+#include <cstdint>
 
 class JsonValue {
 public:
@@ -172,6 +176,182 @@ public:
 
         throw std::runtime_error("JsonValue is not a number");
     }
+
+    // ----------------------------------------------------------------
+    // Minimal RFC-8259 JSON parser. Used primarily by the ORM's typed
+    // hydration path (`Garvan::TypedQuery<T>`) to turn the RawJson
+    // string returned by connection layers back into a walkable
+    // Object/Array tree.  Not intended to be the fastest parser in the
+    // world -- it is intended to be small, dependency-free and
+    // correct for the shape of data the drivers produce (string /
+    // number / bool / null / nested object|array).
+    //
+    // Throws std::runtime_error with a byte offset on malformed input.
+    // ----------------------------------------------------------------
+    static JsonValue parse(std::string_view src) {
+        size_t i = 0;
+        auto val = parseValue(src, i);
+        skipWs(src, i);
+        if (i != src.size()) {
+            throw std::runtime_error("JsonValue::parse: trailing garbage at offset "
+                                     + std::to_string(i));
+        }
+        return val;
+    }
+
+private:
+    static void skipWs(std::string_view s, size_t& i) {
+        while (i < s.size()) {
+            char c = s[i];
+            if (c == ' ' || c == '\t' || c == '\n' || c == '\r') ++i;
+            else break;
+        }
+    }
+
+    [[noreturn]] static void parseError(const char* msg, size_t i) {
+        throw std::runtime_error(std::string("JsonValue::parse: ") + msg
+                                 + " at offset " + std::to_string(i));
+    }
+
+    static JsonValue parseValue(std::string_view s, size_t& i) {
+        skipWs(s, i);
+        if (i >= s.size()) parseError("unexpected end of input", i);
+        char c = s[i];
+        if (c == '"') return parseString(s, i);
+        if (c == '{') return parseObject(s, i);
+        if (c == '[') return parseArray(s, i);
+        if (c == 't' || c == 'f') return parseBool(s, i);
+        if (c == 'n') return parseNull(s, i);
+        if (c == '-' || (c >= '0' && c <= '9')) return parseNumber(s, i);
+        parseError("unexpected character", i);
+    }
+
+    static JsonValue parseString(std::string_view s, size_t& i) {
+        if (s[i] != '"') parseError("expected '\"'", i);
+        ++i;
+        std::string out;
+        while (i < s.size()) {
+            char c = s[i++];
+            if (c == '"') return JsonValue(out);
+            if (c == '\\') {
+                if (i >= s.size()) parseError("unterminated escape", i);
+                char e = s[i++];
+                switch (e) {
+                    case '"':  out.push_back('"');  break;
+                    case '\\': out.push_back('\\'); break;
+                    case '/':  out.push_back('/');  break;
+                    case 'b':  out.push_back('\b'); break;
+                    case 'f':  out.push_back('\f'); break;
+                    case 'n':  out.push_back('\n'); break;
+                    case 'r':  out.push_back('\r'); break;
+                    case 't':  out.push_back('\t'); break;
+                    case 'u': {
+                        if (i + 4 > s.size()) parseError("bad \\u escape", i);
+                        unsigned cp = 0;
+                        for (int k = 0; k < 4; ++k) {
+                            char h = s[i++];
+                            cp <<= 4;
+                            if      (h >= '0' && h <= '9') cp |= (h - '0');
+                            else if (h >= 'a' && h <= 'f') cp |= (h - 'a' + 10);
+                            else if (h >= 'A' && h <= 'F') cp |= (h - 'A' + 10);
+                            else parseError("invalid hex in \\u escape", i);
+                        }
+                        // UTF-8 encode (BMP only; surrogates as raw)
+                        if (cp < 0x80) {
+                            out.push_back(static_cast<char>(cp));
+                        } else if (cp < 0x800) {
+                            out.push_back(static_cast<char>(0xC0 | (cp >> 6)));
+                            out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+                        } else {
+                            out.push_back(static_cast<char>(0xE0 | (cp >> 12)));
+                            out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+                            out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+                        }
+                        break;
+                    }
+                    default: parseError("bad escape character", i);
+                }
+            } else {
+                out.push_back(c);
+            }
+        }
+        parseError("unterminated string", i);
+    }
+
+    static JsonValue parseNumber(std::string_view s, size_t& i) {
+        size_t start = i;
+        if (s[i] == '-') ++i;
+        while (i < s.size() && s[i] >= '0' && s[i] <= '9') ++i;
+        bool isFloat = false;
+        if (i < s.size() && s[i] == '.') {
+            isFloat = true; ++i;
+            while (i < s.size() && s[i] >= '0' && s[i] <= '9') ++i;
+        }
+        if (i < s.size() && (s[i] == 'e' || s[i] == 'E')) {
+            isFloat = true; ++i;
+            if (i < s.size() && (s[i] == '+' || s[i] == '-')) ++i;
+            while (i < s.size() && s[i] >= '0' && s[i] <= '9') ++i;
+        }
+        std::string tok(s.substr(start, i - start));
+        if (isFloat) {
+            return JsonValue(std::stod(tok));
+        }
+        try {
+            return JsonValue(static_cast<int64_t>(std::stoll(tok)));
+        } catch (...) {
+            // fall back to double for out-of-range integers
+            return JsonValue(std::stod(tok));
+        }
+    }
+
+    static JsonValue parseBool(std::string_view s, size_t& i) {
+        if (s.compare(i, 4, "true") == 0)  { i += 4; return JsonValue(true); }
+        if (s.compare(i, 5, "false") == 0) { i += 5; return JsonValue(false); }
+        parseError("invalid literal (expected true/false)", i);
+    }
+
+    static JsonValue parseNull(std::string_view s, size_t& i) {
+        if (s.compare(i, 4, "null") == 0)  { i += 4; return JsonValue(nullptr); }
+        parseError("invalid literal (expected null)", i);
+    }
+
+    static JsonValue parseArray(std::string_view s, size_t& i) {
+        ++i; // consume '['
+        JsonValue arr; arr.value = Array{};
+        skipWs(s, i);
+        if (i < s.size() && s[i] == ']') { ++i; return arr; }
+        while (true) {
+            arr.push_back(parseValue(s, i));
+            skipWs(s, i);
+            if (i >= s.size()) parseError("unterminated array", i);
+            if (s[i] == ',') { ++i; skipWs(s, i); continue; }
+            if (s[i] == ']') { ++i; return arr; }
+            parseError("expected ',' or ']' in array", i);
+        }
+    }
+
+    static JsonValue parseObject(std::string_view s, size_t& i) {
+        ++i; // consume '{'
+        JsonValue obj; obj.value = Object{};
+        skipWs(s, i);
+        if (i < s.size() && s[i] == '}') { ++i; return obj; }
+        while (true) {
+            skipWs(s, i);
+            JsonValue key = parseString(s, i);
+            skipWs(s, i);
+            if (i >= s.size() || s[i] != ':') parseError("expected ':' in object", i);
+            ++i;
+            JsonValue val = parseValue(s, i);
+            std::get<Object>(obj.value).emplace(key.asString(), std::move(val));
+            skipWs(s, i);
+            if (i >= s.size()) parseError("unterminated object", i);
+            if (s[i] == ',') { ++i; continue; }
+            if (s[i] == '}') { ++i; return obj; }
+            parseError("expected ',' or '}' in object", i);
+        }
+    }
+
+public:
 
     bool empty() const {
         if (std::holds_alternative<Object>(value))

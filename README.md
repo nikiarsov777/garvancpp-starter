@@ -31,6 +31,9 @@ and deploy.
 - Event bus + job queue with pluggable drivers (`SyncDriver` today; async / database
   drivers pluggable via service providers).
 - Real SMTP mail sending (HTML, TLS / STARTTLS) via libcurl in `AppJobs::SendTestMail`.
+- Typed ORM pipeline (`Model::query<T>()`, `TypedQuery<T>`) with automatic
+  rehydration, instance-level `save()`/`remove()`, and safe bulk `update()`/
+  `remove()` (see "Typed ORM pipeline" below).
 
 ### Project structure
 
@@ -246,6 +249,87 @@ cmake --build build -j$(nproc)
 Copy the freshly built `libgarvan.a` (and any updated headers under `include/`)
 over the files in your project's `vendors/Garvan/` directory, then rebuild the
 app with `cmake --build build -j` or `./make.sh`.
+
+### Typed ORM pipeline (`TypedQuery<T>`)
+
+The classic Garvan chain (`Model::where<T>(...)->first()`) returns
+`json` and does not rehydrate into a typed model. The typed pipeline
+(added 2026-08-21) closes that gap without breaking any existing
+call site:
+
+```cpp
+// (1) Chain by any column, mutate, save (UPDATE)
+User u = User::query<User>()
+           ->where("email", email)
+           ->where("active","=", true)
+           ->firstOrFail();
+u.set("last_login", now);
+u.save();                          // UPDATE users SET ... WHERE id=<hydrated>
+
+// (2) Load by id
+User u = User::findAs<User>(id);                     // throws if missing
+auto  opt = User::tryFindAs<User>(id);               // std::optional<User>
+
+// (3) Instance-level DELETE
+User u = User::findAs<User>(id);
+u.remove();                        // DELETE FROM users WHERE id=<hydrated>
+
+// (4) Bulk UPDATE / DELETE — empty WHERE throws
+User::query<User>()->where("active","=", false)
+                   ->update({{"deleted_at", now}});
+FcmToken::query<FcmToken>()->where("expires_at","<", now)
+                           ->remove();
+
+// (5) WHERE ... IS NULL on the typed surface
+Settings s = Settings::query<Settings>()
+               ->where("user_id","IS", nullptr)
+               ->firstOrFail();
+
+// (6) List rehydration
+std::vector<User> active = User::query<User>()
+                             ->where("active","=", true)
+                             ->get();
+```
+
+**Terminal cheat sheet:**
+
+| Method                       | Returns                    | On no-match |
+| ---------------------------- | -------------------------- | ----------- |
+| `first()`                    | `std::optional<T>`         | `nullopt`   |
+| `firstOrFail()`              | `T`                        | throws      |
+| `find(int id)`               | `std::optional<T>`         | `nullopt`   |
+| `findOrFail(int id)`         | `T`                        | throws      |
+| `get()`                      | `std::vector<T>`           | empty       |
+| `update(json fields)`        | void                       | throws if no WHERE |
+| `remove()`                   | void                       | throws if no WHERE |
+| `Model::findAs<T>(id)`       | `T`                        | throws      |
+| `Model::tryFindAs<T>(id)`    | `std::optional<T>`         | `nullopt`   |
+| `Model::query<T>()`          | `std::unique_ptr<TypedQuery<T>>` | —     |
+
+Setters remain manual on subclasses (`this->set("email", v)` inside a
+scaffolded `UserMonet::setEmail(...)` helper); no macro-generated
+accessors are introduced in this revision.
+
+**Guards.** Bulk `update()` / `remove()` refuse to run without at
+least one `where(...)` clause (protection against accidental full-
+table writes). `Model::remove()` on an unhydrated instance (empty id)
+also throws.
+
+**BC.** The classical `Model::where<T>(...)` chain and the untyped
+`json first() / find(int) / get()` terminals stay untouched.
+
+**Behind the scenes.** Connection layers ship results as
+`JsonValue::RawJson` (a JSON string). `TypedQuery` parses that back
+into a walkable Object/Array tree via the new
+`JsonValue::parse(std::string_view)` (RFC 8259, dependency-free) and
+calls `Model::hydrate(row)` — which populates `attributes` and sets
+`id` so the next `save()` naturally hits the UPDATE branch.
+
+Closed gaps from `vendors/Garvan/GARVAN.md`: **Gap 1** (Model IS NULL
+— typed surface), **Gap 2** (DELETE — instance + bulk), **Gap 6**
+(UPDATE with non-PK WHERE), **Gap 7** (rehydration into model
+instance). Still open: Gap 3 (aggregates), Gap 4 (JOIN emission),
+Gap 5 (last-insert-id), Gap 8 (MonetDB PS bind pipeline).
 
 ### Kalpasan CLI
 
@@ -469,6 +553,10 @@ GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
   database driver-и се bind-ват през service provider-и).
 - Реален SMTP mail send (HTML, TLS / STARTTLS) през libcurl в
   `AppJobs::SendTestMail`.
+- Типизиран ORM pipeline (`Model::query<T>()`, `TypedQuery<T>`) с
+  автоматична рехидратация, instance-ниво `save()`/`remove()` и
+  безопасни bulk `update()`/`remove()` (виж "Типизиран ORM pipeline"
+  по-долу).
 
 ### Структура на проекта
 
@@ -611,6 +699,88 @@ cmake --build build -j$(nproc)
 Копирайте новопостроения `libgarvan.a` (и евентуално обновените хедъри от
 `include/`) върху файловете в `vendors/Garvan/` на проекта и пребилдвайте
 приложението с `cmake --build build -j` или `./make.sh`.
+
+### Типизиран ORM pipeline (`TypedQuery<T>`)
+
+Класическият Garvan chain (`Model::where<T>(...)->first()`) връща
+`json` и не рехидратира в типизиран модел. Типизираният pipeline
+(добавен 2026-08-21) затваря тази дупка без да чупи съществуващ
+callsite:
+
+```cpp
+// (1) Chain по коя да е колона, mutate, save (UPDATE)
+User u = User::query<User>()
+           ->where("email", email)
+           ->where("active","=", true)
+           ->firstOrFail();
+u.set("last_login", now);
+u.save();                          // UPDATE users SET ... WHERE id=<hydrated>
+
+// (2) Зареждане по id
+User u = User::findAs<User>(id);                     // throws ако липсва
+auto  opt = User::tryFindAs<User>(id);               // std::optional<User>
+
+// (3) Instance-ниво DELETE
+User u = User::findAs<User>(id);
+u.remove();                        // DELETE FROM users WHERE id=<hydrated>
+
+// (4) Bulk UPDATE / DELETE — празен WHERE => throws
+User::query<User>()->where("active","=", false)
+                   ->update({{"deleted_at", now}});
+FcmToken::query<FcmToken>()->where("expires_at","<", now)
+                           ->remove();
+
+// (5) WHERE ... IS NULL на typed surface
+Settings s = Settings::query<Settings>()
+               ->where("user_id","IS", nullptr)
+               ->firstOrFail();
+
+// (6) List rehydration
+std::vector<User> active = User::query<User>()
+                             ->where("active","=", true)
+                             ->get();
+```
+
+**Терминали:**
+
+| Метод                        | Връща                      | При не-намерено |
+| ---------------------------- | -------------------------- | --------------- |
+| `first()`                    | `std::optional<T>`         | `nullopt`       |
+| `firstOrFail()`              | `T`                        | throws          |
+| `find(int id)`               | `std::optional<T>`         | `nullopt`       |
+| `findOrFail(int id)`         | `T`                        | throws          |
+| `get()`                      | `std::vector<T>`           | празен          |
+| `update(json fields)`        | void                       | throws при празен WHERE |
+| `remove()`                   | void                       | throws при празен WHERE |
+| `Model::findAs<T>(id)`       | `T`                        | throws          |
+| `Model::tryFindAs<T>(id)`    | `std::optional<T>`         | `nullopt`       |
+| `Model::query<T>()`          | `std::unique_ptr<TypedQuery<T>>` | —         |
+
+Setter-ите остават ръчни в наследниците (`this->set("email", v)`
+вътре в scaffold-нат `UserMonet::setEmail(...)` helper); macro-
+генерирани accessor-и не се въвеждат в тази ревизия.
+
+**Guards.** Bulk `update()` / `remove()` отказват да работят без
+поне един `where(...)` (защита срещу случайно full-table
+пренаписване). `Model::remove()` върху нехидриран инстанс (празен
+id) също хвърля.
+
+**BC.** Класическият `Model::where<T>(...)` chain и нетипизираните
+`json first() / find(int) / get()` терминали остават непроменени.
+
+**Как работи вътрешно.** Connection layer-ите връщат резултата
+като `JsonValue::RawJson` (JSON string). `TypedQuery` го парсва
+обратно към Object/Array дърво през новия
+`JsonValue::parse(std::string_view)` (RFC 8259, без dependencies) и
+извиква `Model::hydrate(row)` — попълва `attributes` и сетва `id`,
+така че следващ `save()` естествено попада в UPDATE-branch-a.
+
+Затворени gap-ове от `vendors/Garvan/GARVAN.md`: **Gap 1** (Model
+IS NULL — typed surface), **Gap 2** (DELETE — instance + bulk),
+**Gap 6** (UPDATE с non-PK WHERE), **Gap 7** (rehydration в model
+instance). Остават отворени: Gap 3 (aggregates), Gap 4 (JOIN
+emission), Gap 5 (last-insert-id), Gap 8 (MonetDB PS bind
+pipeline).
 
 ### Kalpasan CLI
 

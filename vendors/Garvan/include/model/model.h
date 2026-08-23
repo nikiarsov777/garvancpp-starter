@@ -6,6 +6,7 @@
 #include "../db/DbClient.h"
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -15,6 +16,7 @@ namespace Garvan
 {
 
 class Model;
+template <typename T> class TypedQuery;   // orm/typed_query.h
 
 // ---------------------------------------------------------------
 // ModelType concept — контракт за типовете, използвани със
@@ -124,6 +126,25 @@ public:
         return instance.get();
     }
 
+    // ============================================================
+    // Typed pipeline (see `GARVAN.md` -- "Какво искам" section).
+    //
+    //   User user = User::query<User>()->where("email",e)->first().value();
+    //   User user = User::findAs<User>(id);          // throws if missing
+    //   auto  opt = User::tryFindAs<User>(id);       // std::optional<User>
+    //
+    // The typed wrapper (`Garvan::TypedQuery<T>`) is defined in
+    // `orm/typed_query.h`, which is included below to keep the entry
+    // points on `Model` without forcing consumers to touch another
+    // header. Terminals return typed instances (or `std::optional<T>`
+    // / `std::vector<T>`) via `Model::hydrate(...)` -- the untyped
+    // `where<T>() -> T*` / `first() -> json` API stays untouched.
+    // ============================================================
+
+    template <ModelType T> static std::unique_ptr<TypedQuery<T>> query();
+    template <ModelType T> static T findAs(int id);
+    template <ModelType T> static std::optional<T> tryFindAs(int id);
+
     // --- Fluent Interface (Chaining) ---
     Model* hasOne(ORM::OModel model, std::string fKey = "", std::string lKey = "");
     Model* belongsTo(ORM::OModel model, std::string fKey = "", std::string lKey = "");
@@ -154,7 +175,38 @@ public:
 
     void save();
 
+    // ------------------------------------------------------------
+    // Instance-level DELETE by hydrated primary key. Requires the
+    // model to have a non-empty `id` (either set via `setId(...)` or
+    // populated by hydration in `TypedQuery<T>` terminals). Throws
+    // `std::runtime_error` if called on a fresh / unhydrated model
+    // to prevent an accidental full-table wipe.
+    //
+    // See `GARVAN.md` "Gap 2 -- DELETE" (resolved).
+    // ------------------------------------------------------------
+    void remove();
+
+    // ------------------------------------------------------------
+    // Populate `attributes` and `id` from a JSON row (typically the
+    // output of the connection layer after `JsonValue::parse`). Used
+    // by `TypedQuery<T>` terminals for rehydration; also usable
+    // directly by consumer code that already has a JSON row in hand.
+    //
+    // Existing attributes are cleared before the copy. Keys whose
+    // values are `null` are copied as-is so callers can distinguish
+    // "not present" from "explicit NULL" later.
+    //
+    // See `GARVAN.md` "Gap 7 -- rehydration" (resolved).
+    // ------------------------------------------------------------
+    void hydrate(const json& row);
+
     DbClient* getDb();
+
+    // Access the underlying Builder for chain composition from the
+    // typed-query wrapper. Prefer the `Model::query<T>()` /
+    // `TypedQuery<T>` API in application code; direct builder access
+    // is an escape hatch.
+    Builder* getBuilder();
 
 private:
     std::unique_ptr<Builder> builder;
@@ -167,5 +219,10 @@ protected:
     bool isPointer = false;
 };
 }
+
+// Included at the end so the wrapper can reference the complete
+// `Garvan::Model` type while its own template methods can still
+// reach the `Model::hydrate/getBuilder` accessors declared above.
+#include "../orm/typed_query.h"
 
 #endif
