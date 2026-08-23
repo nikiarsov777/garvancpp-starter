@@ -1,0 +1,16 @@
+<h1>{{{t_page_guides_base64_e001}}}</h1>
+<p>{{{t_page_guides_base64_e002}}}</p>
+<h2 id="encode">{{{t_page_guides_base64_e003}}}</h2>
+<pre><code class="language-cpp">#include "crow/utility.h"
+
+std::string encoded = crow::utility::base64encode("Ada Lovelace", 12);
+// encoded == "QWRhIExvdmVsYWNl"
+</code></pre>
+<h2 id="decode">{{{t_page_guides_base64_e004}}}</h2>
+<pre><code class="language-cpp">std::string decoded = crow::utility::base64decode(encoded, encoded.size());
+</code></pre>
+<p>{{{t_page_guides_base64_e005}}}</p>
+<div class="page-nav">
+<a class="prev" href="/guides/websockets"><span class="label">{{t_prev}}</span><span class="title">WebSockets</span></a>
+<a class="next" href="/guides/testing"><span class="label">{{t_next}}</span><span class="title">Writing tests</span></a>
+</div>

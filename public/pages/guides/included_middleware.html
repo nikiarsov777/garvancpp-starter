@@ -1,0 +1,31 @@
+<h1>{{{t_page_guides_included_middleware_e001}}}</h1>
+<p>{{{t_page_guides_included_middleware_e002}}}</p>
+<h2 id="cors">{{{t_page_guides_included_middleware_e003}}}</h2>
+<pre><code class="language-cpp">#include "crow/middlewares/cors.h"
+
+crow::App&lt;crow::CORSHandler&gt; app;
+auto &amp;cors = app.get_middleware&lt;crow::CORSHandler&gt;();
+cors.global().origin("https://example.com").allow_credentials();
+</code></pre>
+<h2 id="cookie-parser">{{{t_page_guides_included_middleware_e004}}}</h2>
+<pre><code class="language-cpp">#include "crow/middlewares/cookie_parser.h"
+
+crow::App&lt;crow::CookieParser&gt; app;
+
+CROW_ROUTE(app, "/whoami")([&amp;](const crow::request &amp;req) {
+    auto &amp;cookies = app.get_context&lt;crow::CookieParser&gt;(req);
+    return cookies.get_cookie("session");
+});
+</code></pre>
+<h2 id="sessions">{{{t_page_guides_included_middleware_e005}}}</h2>
+<p>{{{t_page_guides_included_middleware_e006}}}</p>
+<pre><code class="language-cpp">#include "crow/middlewares/session.h"
+
+crow::App&lt;crow::CookieParser, crow::SessionMiddleware&lt;crow::InMemoryStore&gt;&gt; app{
+    crow::SessionMiddleware&lt;crow::InMemoryStore&gt;{}
+};
+</code></pre>
+<div class="page-nav">
+<a class="prev" href="/guides/auth"><span class="label">{{t_prev}}</span><span class="title">HTTP authorization</span></a>
+<a class="next" href="/guides/proxies"><span class="label">{{t_next}}</span><span class="title">Proxies</span></a>
+</div>

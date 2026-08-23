@@ -1,0 +1,50 @@
+<h1>{{{t_page_guides_routes_e001}}}</h1>
+<p>{{{t_page_guides_routes_e002}}}</p>
+<h2 id="macro">{{{t_page_guides_routes_e003}}}</h2>
+<p>{{{t_page_guides_routes_e004}}}</p>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/hello")([] {
+    return "hi";
+});
+</code></pre>
+<p>{{{t_page_guides_routes_e005}}}</p>
+<h2 id="url-parameters">{{{t_page_guides_routes_e006}}}</h2>
+<p>{{{t_page_guides_routes_e007}}}</p>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/users/&lt;int&gt;")([](int id) {
+    return std::to_string(id);
+});
+
+CROW_ROUTE(app, "/files/&lt;path&gt;")([](std::string rest) {
+    return "you requested: " + rest;
+});
+</code></pre>
+<h2 id="methods">{{{t_page_guides_routes_e008}}}</h2>
+<p>{{{t_page_guides_routes_e009}}}</p>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/users")
+    .methods("GET"_method, "POST"_method)
+([](const crow::request &amp;req) {
+    if (req.method == crow::HTTPMethod::POST) {
+        return crow::response(201, "created");
+    }
+    return crow::response("user list");
+});
+</code></pre>
+<h2 id="handler">{{{t_page_guides_routes_e010}}}</h2>
+<p>{{{t_page_guides_routes_e011}}}</p>
+<h2 id="response">{{{t_page_guides_routes_e012}}}</h2>
+<p>{{{t_page_guides_routes_e013}}}</p>
+<pre><code class="language-cpp">return crow::response(404, "not found");
+</code></pre>
+<h2 id="catchall">{{{t_page_guides_routes_e014}}}</h2>
+<p>{{{t_page_guides_routes_e015}}}</p>
+<pre><code class="language-cpp">CROW_CATCHALL_ROUTE(app)([](const crow::request &amp;req) {
+    return crow::response(404, "no such page: " + req.url);
+});
+</code></pre>
+<div class="page-nav">
+<a class="prev" href="/guides/app">
+<span class="label">{{t_prev}}</span><span class="title">App</span>
+</a>
+<a class="next" href="/guides/logging">
+<span class="label">{{t_next}}</span><span class="title">Logging</span>
+</a>
+</div>

@@ -1,0 +1,141 @@
+<h1>{{{t_page_garvan_orm_e001}}}</h1>
+<p>{{{t_page_garvan_orm_e002}}}</p>
+<h2 id="builder">{{{t_page_garvan_orm_e003}}}</h2>
+<p>{{{t_page_garvan_orm_e004}}}</p>
+<pre><code class="language-cpp">Builder qb(dbClient, grammar, "users",
+           /*public*/{"id","name","email"},
+           /*private*/{"password"});
+
+auto rows = qb
+    .where("active", "=", "1")
+    -&gt;where("role", "=", "admin")
+    -&gt;get();
+</code></pre>
+<p>{{{t_page_garvan_orm_e005}}}</p>
+<p>{{{t_page_garvan_orm_e006}}}</p>
+<h2 id="omodel">{{{t_page_garvan_orm_e007}}}</h2>
+<p>{{{t_page_garvan_orm_e008}}}</p>
+<pre><code class="language-cpp">class User : public ORM::OModel
+{
+public:
+    User() {
+        table          = "users";
+        primaryKey     = "id";
+        public_columns  = {"id", "name", "email"};
+        private_columns = {"password"};
+    }
+};
+</code></pre>
+<h2 id="grammars">{{{t_page_garvan_orm_e009}}}</h2>
+<p>{{{t_page_garvan_orm_e010}}}</p>
+<ul>
+<li>{{{t_page_garvan_orm_e011}}}</li>
+<li>{{{t_page_garvan_orm_e012}}}</li>
+<li>{{{t_page_garvan_orm_e013}}}</li>
+<li>{{{t_page_garvan_orm_e014}}}</li>
+<li>{{{t_page_garvan_orm_e015}}}</li>
+</ul>
+<p>{{{t_page_garvan_orm_e016}}}</p>
+<h2 id="typed-query">{{{t_page_garvan_orm_e017}}}</h2>
+<p>{{{t_page_garvan_orm_e018}}}</p>
+<pre><code class="language-cpp">// Chain by any column, mutate, save (UPDATE)
+User u = User::query&lt;User&gt;()
+           -&gt;where("email", email)
+           -&gt;where("active","=", true)
+           -&gt;firstOrFail();
+u.set("last_login", now);
+u.save();                          // UPDATE ... WHERE id=&lt;hydrated&gt;
+
+// Load by id
+User u   = User::findAs&lt;User&gt;(id);        // throws if missing
+auto opt = User::tryFindAs&lt;User&gt;(id);     // std::optional&lt;User&gt;
+
+// Instance DELETE
+User u = User::findAs&lt;User&gt;(id);
+u.remove();                        // DELETE ... WHERE id=&lt;hydrated&gt;
+
+// Bulk UPDATE / DELETE (empty WHERE -&gt; throws)
+
+// Status transition (state machine on a cohort)
+Invoice::query&lt;Invoice&gt;()-&gt;where("status","=","pending")
+                        -&gt;update({{"status","sent"},
+                                  {"sent_at", now}});
+
+// Soft-delete on a coherent cohort
+User::query&lt;User&gt;()-&gt;where("banned","=", true)
+                   -&gt;update({{"deleted_at", now}});          // soft-delete
+
+// Hard-delete stale rows
+FcmToken::query&lt;FcmToken&gt;()-&gt;where("expires_at","&lt;", now)
+                           -&gt;remove();                        // hard delete
+
+// IS NULL on the typed surface
+Settings s = Settings::query&lt;Settings&gt;()
+               -&gt;where("user_id","IS", nullptr)
+               -&gt;firstOrFail();
+
+// List rehydration
+std::vector&lt;User&gt; active = User::query&lt;User&gt;()
+                             -&gt;where("active","=", true)
+                             -&gt;get();
+</code></pre>
+<h3>{{{t_page_garvan_orm_e019}}}</h3>
+<table>
+<thead><tr><th>{{{t_page_garvan_orm_e020}}}</th><th>{{{t_page_garvan_orm_e021}}}</th><th>{{{t_page_garvan_orm_e022}}}</th></tr></thead>
+<tbody>
+<tr><td>{{{t_page_garvan_orm_e023}}}</td><td>{{{t_page_garvan_orm_e024}}}</td><td>{{{t_page_garvan_orm_e025}}}</td></tr>
+<tr><td>{{{t_page_garvan_orm_e026}}}</td><td>{{{t_page_garvan_orm_e027}}}</td><td>{{{t_page_garvan_orm_e028}}}</td></tr>
+<tr><td>{{{t_page_garvan_orm_e029}}}</td><td>{{{t_page_garvan_orm_e030}}}</td><td>{{{t_page_garvan_orm_e031}}}</td></tr>
+<tr><td>{{{t_page_garvan_orm_e032}}}</td><td>{{{t_page_garvan_orm_e033}}}</td><td>{{{t_page_garvan_orm_e034}}}</td></tr>
+<tr><td>{{{t_page_garvan_orm_e035}}}</td><td>{{{t_page_garvan_orm_e036}}}</td><td>{{{t_page_garvan_orm_e037}}}</td></tr>
+<tr><td>{{{t_page_garvan_orm_e038}}}</td><td>{{{t_page_garvan_orm_e039}}}</td><td>{{{t_page_garvan_orm_e040}}}</td></tr>
+<tr><td>{{{t_page_garvan_orm_e041}}}</td><td>{{{t_page_garvan_orm_e042}}}</td><td>{{{t_page_garvan_orm_e043}}}</td></tr>
+<tr><td>{{{t_page_garvan_orm_e044}}}</td><td>{{{t_page_garvan_orm_e045}}}</td><td>{{{t_page_garvan_orm_e046}}}</td></tr>
+<tr><td>{{{t_page_garvan_orm_e047}}}</td><td>{{{t_page_garvan_orm_e048}}}</td><td>{{{t_page_garvan_orm_e049}}}</td></tr>
+</tbody>
+</table>
+<p>{{{t_page_garvan_orm_e050}}}</p>
+<p>{{{t_page_garvan_orm_e051}}}</p>
+<h2 id="cpp23-api">{{{t_page_garvan_orm_e052}}}</h2>
+<p>{{{t_page_garvan_orm_e053}}}</p>
+<h3>{{{t_page_garvan_orm_e054}}}</h3>
+<pre><code class="language-cpp">template &lt;ModelType T&gt;
+static T* where(std::string field, std::string value);
+// ModelType = std::derived_from&lt;T, Garvan::Model&gt;
+//          &amp;&amp; std::is_default_constructible_v&lt;T&gt;
+</code></pre>
+<p>{{{t_page_garvan_orm_e055}}}</p>
+<h3>{{{t_page_garvan_orm_e056}}}</h3>
+<p>{{{t_page_garvan_orm_e057}}}</p>
+<h3>{{{t_page_garvan_orm_e058}}}</h3>
+<pre><code class="language-cpp">builder-&gt;where("id", "=", 42);                // int  -&gt; "42"
+builder-&gt;where("active", "=", true);          // bool -&gt; "true"
+builder-&gt;where("deleted_at", "IS", nullptr);  //      -&gt; "NULL"
+</code></pre>
+<p>{{{t_page_garvan_orm_e059}}}</p>
+<h3>{{{t_page_garvan_orm_e060}}}</h3>
+<pre><code class="language-cpp">Builder b(...);
+b.whereRef("id", "1").whereRef("age", "&gt;", "18").get();
+</code></pre>
+<p>{{{t_page_garvan_orm_e061}}}</p>
+<h3>{{{t_page_garvan_orm_e062}}}</h3>
+<pre><code class="language-cpp">auto result = user-&gt;tryFirst();
+if (!result) {
+    log(result.error().message);
+    return;
+}
+json data = *result;
+</code></pre>
+<p>{{{t_page_garvan_orm_e063}}}</p>
+<h3>{{{t_page_garvan_orm_e064}}}</h3>
+<ul>
+<li>{{{t_page_garvan_orm_e065}}}</li>
+<li>{{{t_page_garvan_orm_e066}}}</li>
+<li>{{{t_page_garvan_orm_e067}}}</li>
+<li>{{{t_page_garvan_orm_e068}}}</li>
+<li>{{{t_page_garvan_orm_e069}}}</li>
+</ul>
+<div class="page-nav">
+<a class="prev" href="/garvan/env"><span class="label">{{t_prev}}</span><span class="title">.env configuration</span></a>
+<a class="next" href="/garvan/models"><span class="label">{{t_next}}</span><span class="title">Models</span></a>
+</div>

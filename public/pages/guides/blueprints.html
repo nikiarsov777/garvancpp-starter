@@ -1,0 +1,17 @@
+<h1>{{{t_page_guides_blueprints_e001}}}</h1>
+<p>{{{t_page_guides_blueprints_e002}}}</p>
+<h2 id="creating">{{{t_page_guides_blueprints_e003}}}</h2>
+<pre><code class="language-cpp">crow::Blueprint api("api/v1", "static_v1", "templates_v1");
+
+CROW_BP_ROUTE(api, "/users")([] {
+    return "v1 users";
+});
+</code></pre>
+<h2 id="mounting">{{{t_page_guides_blueprints_e004}}}</h2>
+<pre><code class="language-cpp">app.register_blueprint(api);
+</code></pre>
+<p>{{{t_page_guides_blueprints_e005}}}</p>
+<div class="page-nav">
+<a class="prev" href="/guides/static"><span class="label">{{t_prev}}</span><span class="title">Static files</span></a>
+<a class="next" href="/guides/compression"><span class="label">{{t_next}}</span><span class="title">Compression</span></a>
+</div>

@@ -1,0 +1,25 @@
+<h1>{{{t_page_garvan_helpers_e001}}}</h1>
+<p>{{{t_page_garvan_helpers_e002}}}</p>
+<h2 id="helper">{{{t_page_garvan_helpers_e003}}}</h2>
+<p>{{{t_page_garvan_helpers_e004}}}</p>
+<pre><code class="language-cpp">#include "tools/Helper.h"
+
+std::string slug = Helper::slug("Hello, World!"); // "hello-world"
+</code></pre>
+<h2 id="jsonvalue">{{{t_page_garvan_helpers_e005}}}</h2>
+<p>{{{t_page_garvan_helpers_e006}}}</p>
+<pre><code class="language-cpp">#include "tools/JsonValue.h"
+using json = JsonValue;
+
+json out;
+out["status"] = "ok";
+out["data"]   = json::Array();
+out["data"].append({ {"id", 1}, {"name", "Ada"} });
+return out;
+</code></pre>
+<h2 id="logger">{{{t_page_garvan_helpers_e007}}}</h2>
+<p>{{{t_page_garvan_helpers_e008}}}</p>
+<div class="page-nav">
+<a class="prev" href="/garvan/databases"><span class="label">{{t_prev}}</span><span class="title">Database drivers</span></a>
+<a class="next" href="/reference"><span class="label">{{t_next}}</span><span class="title">API Reference</span></a>
+</div>

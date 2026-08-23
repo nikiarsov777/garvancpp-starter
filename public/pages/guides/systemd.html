@@ -1,0 +1,29 @@
+<h1>{{{t_page_guides_systemd_e001}}}</h1>
+<p>{{{t_page_guides_systemd_e002}}}</p>
+<h2 id="unit-file">{{{t_page_guides_systemd_e003}}}</h2>
+<pre><code class="language-bash">[Unit]
+Description=My Garvan app
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/srv/my-app
+ExecStart=/srv/my-app/bin/app.bin
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=/srv/my-app/.env
+
+[Install]
+WantedBy=multi-user.target
+</code></pre>
+<h2 id="enable">{{{t_page_guides_systemd_e004}}}</h2>
+<pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl enable --now my-app.service
+sudo journalctl -u my-app.service -f
+</code></pre>
+<p>{{{t_page_guides_systemd_e005}}}</p>
+<div class="page-nav">
+<a class="prev" href="/guides/proxies"><span class="label">{{t_prev}}</span><span class="title">Proxies</span></a>
+<a class="next" href="/garvan/env"><span class="label">{{t_next}}</span><span class="title">.env configuration</span></a>
+</div>

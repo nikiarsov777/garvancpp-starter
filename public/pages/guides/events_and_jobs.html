@@ -1,0 +1,45 @@
+<h1>{{{t_page_guides_events_and_jobs_e001}}}</h1>
+<p>{{{t_page_guides_events_and_jobs_e002}}}</p>
+<h2 id="flow">{{{t_page_guides_events_and_jobs_e003}}}</h2>
+<pre>
+GET /api/events/user-registered?email=...&amp;name=...&amp;id=...
+  → EventDispatcher::fire(AppEvents::UserRegistered)
+      → LogRegistrationListener::handle()      (writes a log line)
+      → SendWelcomeEmailListener::handle()
+           → JobDispatcher::dispatch(SendTestMail)
+                → SyncDriver (inline in this HTTP thread)
+                     → SendTestMail::handle()  (libcurl SMTP send)
+</pre>
+<p>{{{t_page_guides_events_and_jobs_e004}}}</p>
+<h2 id="curl">{{{t_page_guides_events_and_jobs_e005}}}</h2>
+<p>{{{t_page_guides_events_and_jobs_e006}}}</p>
+<pre><code class="language-bash">curl "http://localhost:9090/api/events/user-registered?email=you@x.com&amp;name=You&amp;id=1"
+</code></pre>
+<p>{{{t_page_guides_events_and_jobs_e007}}}</p>
+<pre><code class="language-json">{
+  "status": "fired",
+  "event": "UserRegistered",
+  "listeners": 2,
+  "payload": {"user_id": 1, "email": "you@x.com", "name": "You"}
+}
+</code></pre>
+<h2 id="logs">{{{t_page_guides_events_and_jobs_e008}}}</h2>
+<p>{{{t_page_guides_events_and_jobs_e009}}}</p>
+<pre><code>[LogRegistrationListener] user #1 You &lt;you@x.com&gt; registered
+[SendTestMail] dispatch driver=smtp host=smtp.example.com:465 enc=tls from=&lt;...&gt; -&gt; to=&lt;you@x.com&gt; subject="Welcome ..." body_len=...
+[SendTestMail] SMTP send OK via smtps://smtp.example.com:465 -&gt; &lt;you@x.com&gt;
+(YYYY-MM-DD HH:MM:SS) [INFO    ] Response: ... /api/events/user-registered?... 200 0
+</code></pre>
+<p>{{{t_page_guides_events_and_jobs_e010}}}</p>
+<h2 id="troubleshoot">{{{t_page_guides_events_and_jobs_e011}}}</h2>
+<ul>
+<li>{{{t_page_guides_events_and_jobs_e012}}}</li>
+<li>{{{t_page_guides_events_and_jobs_e013}}}</li>
+<li>{{{t_page_guides_events_and_jobs_e014}}}</li>
+<li>{{{t_page_guides_events_and_jobs_e015}}}</li>
+<li>{{{t_page_guides_events_and_jobs_e016}}}</li>
+</ul>
+<div class="page-nav">
+<a class="prev" href="/guides/systemd"><span class="label">{{t_prev}}</span><span class="title">systemd service</span></a>
+<a class="next" href="/garvan/env"><span class="label">{{t_next}}</span><span class="title">.env configuration</span></a>
+</div>

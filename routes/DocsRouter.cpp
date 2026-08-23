@@ -1,4 +1,5 @@
 #include "DocsRouter.h"
+#include "app/services/I18n.h"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -6,76 +7,16 @@
 namespace Routes
 {
     // ----------------------------------------------------------------------
-    // Languages
+    // Languages — delegated to AppServices::I18n (single source of truth).
     // ----------------------------------------------------------------------
     const std::vector<std::string> &DocsRouter::languages()
     {
-        static const std::vector<std::string> langs = {"en", "bg", "ru", "es", "tr", "pt"};
-        return langs;
+        return AppServices::I18n::languages();
     }
 
     const std::string &DocsRouter::defaultLang()
     {
-        static const std::string d = "en";
-        return d;
-    }
-
-    // ----------------------------------------------------------------------
-    // UI strings (EN + BG fully translated; others fall back to EN)
-    // ----------------------------------------------------------------------
-    const std::map<std::string, std::map<std::string, std::string>> &DocsRouter::strings()
-    {
-        static const std::map<std::string, std::map<std::string, std::string>> S = {
-            {"t_nav_home",            {{"en", "Home"},            {"bg", "Начало"},        {"ru", "Главная"},     {"es", "Inicio"},        {"tr", "Ana sayfa"},   {"pt", "Início"}}},
-            {"t_nav_getting_started", {{"en", "Getting Started"}, {"bg", "Начален пристъп"}, {"ru", "Начало работы"}, {"es", "Primeros pasos"},{"tr", "Başlangıç"},  {"pt", "Primeiros passos"}}},
-            {"t_nav_guides",          {{"en", "Guides"},          {"bg", "Ръководства"},   {"ru", "Руководства"}, {"es", "Guías"},         {"tr", "Kılavuzlar"},  {"pt", "Guias"}}},
-            {"t_nav_garvan",          {{"en", "Garvan"},          {"bg", "Гарван"},        {"ru", "Гарван"},      {"es", "Garvan"},        {"tr", "Garvan"},      {"pt", "Garvan"}}},
-            {"t_nav_reference",       {{"en", "API Reference"},   {"bg", "API справка"},   {"ru", "Справочник API"}, {"es", "Referencia API"}, {"tr", "API Referansı"}, {"pt", "Referência da API"}}},
-
-            {"t_side_project_templates", {{"en", "Project templates"}, {"bg", "Шаблони за проекти"}, {"ru", "Шаблоны проектов"}, {"es", "Plantillas de proyecto"}, {"tr", "Proje şablonları"}, {"pt", "Modelos de projeto"}}},
-            {"t_side_first_app",         {{"en", "Your first application"}, {"bg", "Вашето първо приложение"}, {"ru", "Ваше первое приложение"}, {"es", "Tu primera aplicación"}, {"tr", "İlk uygulamanız"}, {"pt", "A sua primeira aplicação"}}},
-            {"t_side_simple_webpage",    {{"en", "A simple webpage"}, {"bg", "Проста уеб страница"}, {"ru", "Простая веб-страница"}, {"es", "Una página web simple"}, {"tr", "Basit bir web sayfası"}, {"pt", "Uma página web simples"}}},
-            {"t_side_routes",            {{"en", "Routes"}, {"bg", "Маршрути"}, {"ru", "Маршруты"}, {"es", "Rutas"}, {"tr", "Rotalar"}, {"pt", "Rotas"}}},
-            {"t_side_logging",           {{"en", "Logging"}, {"bg", "Логиране"}, {"ru", "Логирование"}, {"es", "Registro"}, {"tr", "Günlükleme"}, {"pt", "Registo"}}},
-            {"t_side_templating",        {{"en", "Templating (Mustache)"}, {"bg", "Шаблони (Mustache)"}, {"ru", "Шаблоны (Mustache)"}, {"es", "Plantillas (Mustache)"}, {"tr", "Şablonlar (Mustache)"}, {"pt", "Templates (Mustache)"}}},
-            {"t_side_query_string",      {{"en", "Query strings"}, {"bg", "Параметри в URL"}, {"ru", "Параметры URL"}, {"es", "Cadenas de consulta"}, {"tr", "Sorgu dizeleri"}, {"pt", "Strings de consulta"}}},
-            {"t_side_static",            {{"en", "Static files"}, {"bg", "Статични файлове"}, {"ru", "Статические файлы"}, {"es", "Archivos estáticos"}, {"tr", "Statik dosyalar"}, {"pt", "Ficheiros estáticos"}}},
-            {"t_side_compression",       {{"en", "Compression"}, {"bg", "Компресия"}, {"ru", "Сжатие"}, {"es", "Compresión"}, {"tr", "Sıkıştırma"}, {"pt", "Compressão"}}},
-            {"t_side_testing",           {{"en", "Writing tests"}, {"bg", "Тестване"}, {"ru", "Написание тестов"}, {"es", "Escribir pruebas"}, {"tr", "Test yazma"}, {"pt", "Escrever testes"}}},
-            {"t_side_auth",              {{"en", "HTTP authorization"}, {"bg", "HTTP оторизация"}, {"ru", "HTTP авторизация"}, {"es", "Autorización HTTP"}, {"tr", "HTTP yetkilendirme"}, {"pt", "Autorização HTTP"}}},
-            {"t_side_included_mw",       {{"en", "Included middlewares"}, {"bg", "Вградени middleware-и"}, {"ru", "Встроенные middleware"}, {"es", "Middlewares incluidos"}, {"tr", "Dahili middleware'ler"}, {"pt", "Middlewares incluídos"}}},
-            {"t_side_proxies",           {{"en", "Proxies"}, {"bg", "Прокси сървъри"}, {"ru", "Прокси-серверы"}, {"es", "Proxies"}, {"tr", "Proxy sunucular"}, {"pt", "Proxies"}}},
-
-            {"t_side_env",         {{"en", ".env configuration"}, {"bg", ".env конфигурация"}, {"ru", "Конфигурация .env"}, {"es", "Configuración .env"}, {"tr", ".env yapılandırması"}, {"pt", "Configuração .env"}}},
-            {"t_side_orm",         {{"en", "ORM / Query Builder"}, {"bg", "ORM / Query Builder"}, {"ru", "ORM / Query Builder"}, {"es", "ORM / Query Builder"}, {"tr", "ORM / Query Builder"}, {"pt", "ORM / Query Builder"}}},
-            {"t_side_models",      {{"en", "Models"}, {"bg", "Модели"}, {"ru", "Модели"}, {"es", "Modelos"}, {"tr", "Modeller"}, {"pt", "Modelos"}}},
-            {"t_side_controllers", {{"en", "Controllers"}, {"bg", "Контролери"}, {"ru", "Контроллеры"}, {"es", "Controladores"}, {"tr", "Kontrolcüler"}, {"pt", "Controladores"}}},
-            {"t_side_services",    {{"en", "Services"}, {"bg", "Услуги"}, {"ru", "Сервисы"}, {"es", "Servicios"}, {"tr", "Servisler"}, {"pt", "Serviços"}}},
-            {"t_side_migrations",  {{"en", "Migrations"}, {"bg", "Миграции"}, {"ru", "Миграции"}, {"es", "Migraciones"}, {"tr", "Göçler"}, {"pt", "Migrações"}}},
-            {"t_side_databases",   {{"en", "Database drivers"}, {"bg", "Драйвери за бази данни"}, {"ru", "Драйверы БД"}, {"es", "Controladores de BD"}, {"tr", "Veritabanı sürücüleri"}, {"pt", "Controladores de BD"}}},
-            {"t_side_helpers",     {{"en", "Helpers"}, {"bg", "Помощни инструменти"}, {"ru", "Утилиты"}, {"es", "Utilidades"}, {"tr", "Yardımcılar"}, {"pt", "Utilitários"}}},
-            {"t_side_jobs",        {{"en", "Jobs"}, {"bg", "Jobs"}, {"ru", "Jobs"}, {"es", "Jobs"}, {"tr", "Görevler"}, {"pt", "Jobs"}}},
-            {"t_side_events",      {{"en", "Events"}, {"bg", "Events"}, {"ru", "События"}, {"es", "Eventos"}, {"tr", "Olaylar"}, {"pt", "Eventos"}}},
-            {"t_side_mail",        {{"en", "Mail (SMTP)"}, {"bg", "Mail (SMTP)"}, {"ru", "Почта (SMTP)"}, {"es", "Correo (SMTP)"}, {"tr", "E-posta (SMTP)"}, {"pt", "E-mail (SMTP)"}}},
-            {"t_side_events_and_jobs", {{"en", "Events & Jobs walkthrough"}, {"bg", "Events & Jobs — стъпка по стъпка"}, {"ru", "Events & Jobs — пошагово"}, {"es", "Events & Jobs — recorrido"}, {"tr", "Events & Jobs — adım adım"}, {"pt", "Events & Jobs — passo a passo"}}},
-            {"t_side_api_index",   {{"en", "API index"}, {"bg", "API индекс"}, {"ru", "Индекс API"}, {"es", "Índice de API"}, {"tr", "API dizini"}, {"pt", "Índice da API"}}},
-
-            {"t_on_this_page",        {{"en", "On this page"}, {"bg", "На тази страница"}, {"ru", "На этой странице"}, {"es", "En esta página"}, {"tr", "Bu sayfada"}, {"pt", "Nesta página"}}},
-            {"t_license",             {{"en", "License"}, {"bg", "Лиценз"}, {"ru", "Лицензия"}, {"es", "Licencia"}, {"tr", "Lisans"}, {"pt", "Licença"}}},
-            {"t_privacy",             {{"en", "Privacy"}, {"bg", "Поверителност"}, {"ru", "Конфиденциальность"}, {"es", "Privacidad"}, {"tr", "Gizlilik"}, {"pt", "Privacidade"}}},
-            {"t_built_with",          {{"en", "Built on top of"}, {"bg", "Изградено върху"}, {"ru", "Построено на"}, {"es", "Construido sobre"}, {"tr", "Üzerine inşa edildi"}, {"pt", "Construído sobre"}}},
-            {"t_translation_pending", {{"en", "This page is not yet translated to your language. Showing the English version."},
-                                       {"bg", "Тази страница все още не е преведена на вашия език. Показва се английската версия."},
-                                       {"ru", "Эта страница ещё не переведена на ваш язык. Показывается английская версия."},
-                                       {"es", "Esta página aún no está traducida a tu idioma. Mostrando la versión en inglés."},
-                                       {"tr", "Bu sayfa henüz dilinize çevrilmedi. İngilizce sürümü gösteriliyor."},
-                                       {"pt", "Esta página ainda não foi traduzida para o seu idioma. A mostrar a versão em inglês."}}},
-            {"t_404_title",           {{"en", "Page not found"}, {"bg", "Страницата не е намерена"}, {"ru", "Страница не найдена"}, {"es", "Página no encontrada"}, {"tr", "Sayfa bulunamadı"}, {"pt", "Página não encontrada"}}},
-            {"t_404_body",            {{"en", "The page you requested does not exist."}, {"bg", "Страницата, която поискахте, не съществува."}, {"ru", "Запрошенная страница не существует."}, {"es", "La página que solicitó no existe."}, {"tr", "İstediğiniz sayfa mevcut değil."}, {"pt", "A página solicitada não existe."}}},
-            {"t_prev",                {{"en", "Previous"}, {"bg", "Предишна"}, {"ru", "Предыдущая"}, {"es", "Anterior"}, {"tr", "Önceki"}, {"pt", "Anterior"}}},
-            {"t_next",                {{"en", "Next"}, {"bg", "Следваща"}, {"ru", "Следующая"}, {"es", "Siguiente"}, {"tr", "Sonraki"}, {"pt", "Próxima"}}},
-        };
-        return S;
+        return AppServices::I18n::defaultLang();
     }
 
     // ----------------------------------------------------------------------
@@ -519,7 +460,26 @@ namespace Routes
                     {"jsonvalue", "JsonValue", "JsonValue", false},
                     {"logger", "Logger", "Logger", false},
                 },
-                "garvan/databases", "reference"
+                "garvan/databases", "garvan/i18n"
+            }},
+
+            {"garvan/i18n", {
+                "garvan/i18n", "garvan",
+                "Internationalisation (i18n)", "Интернационализация (i18n)",
+                "Dictionary-backed i18n: canonical templates + JSON dicts + AppServices::I18n.",
+                "Речниково-базирана i18n: канонични темплейти + JSON dict-ове + AppServices::I18n.",
+                {
+                    {"overview",    "Overview",           "Преглед", false},
+                    {"layout",      "File layout",        "Файлова структура", false},
+                    {"components",  "Component map",      "Компоненти", false},
+                    {"lifecycle",   "Request lifecycle",  "Жизнен цикъл на заявка", false},
+                    {"fallback",    "Fallback chain",     "Fallback верига", false},
+                    {"lang-switch", "Language switching", "Смяна на език", false},
+                    {"add-key",     "Adding a key",       "Добавяне на ключ", false},
+                    {"add-page",    "Adding a page",      "Добавяне на страница", false},
+                    {"js-dict",     "JS strings",         "JS низове", false},
+                },
+                "garvan/helpers", "reference"
             }},
 
             // -------- API Reference --------
@@ -531,7 +491,7 @@ namespace Routes
                     {"about", "About", "Относно", false},
                     {"namespaces", "Namespaces", "Пространства от имена", false},
                 },
-                "garvan/helpers", ""
+                "garvan/i18n", ""
             }},
         };
         return P;
@@ -542,43 +502,17 @@ namespace Routes
     // ----------------------------------------------------------------------
     std::string DocsRouter::tr(const std::string &key, const std::string &lang)
     {
-        const auto &S = strings();
-        auto it = S.find(key);
-        if (it == S.end()) return key;
-        auto lit = it->second.find(lang);
-        if (lit != it->second.end()) return lit->second;
-        auto eit = it->second.find("en");
-        if (eit != it->second.end()) return eit->second;
-        return key;
+        return AppServices::I18n::t(lang, key);
     }
 
     std::string DocsRouter::detectLang(const crow::request &req)
     {
-        const auto &langs = languages();
-        std::string cookie = req.get_header_value("Cookie");
-        if (cookie.empty()) return defaultLang();
-
-        // Find lang= in the cookie string
-        auto pos = cookie.find("lang=");
-        if (pos == std::string::npos) return defaultLang();
-        pos += 5;
-        auto end = cookie.find(';', pos);
-        std::string val = cookie.substr(pos, (end == std::string::npos) ? std::string::npos : end - pos);
-
-        // Trim whitespace
-        while (!val.empty() && (val.front() == ' ' || val.front() == '\t')) val.erase(0, 1);
-        while (!val.empty() && (val.back()  == ' ' || val.back()  == '\t')) val.pop_back();
-
-        if (std::find(langs.begin(), langs.end(), val) != langs.end()) return val;
-        return defaultLang();
+        return AppServices::I18n::lang_for(req);
     }
 
     std::string DocsRouter::langCookieHeader(const std::string &lang)
     {
-        std::string l = lang;
-        const auto &langs = languages();
-        if (std::find(langs.begin(), langs.end(), l) == langs.end()) l = defaultLang();
-        return "lang=" + l + "; Path=/; Max-Age=31536000; SameSite=Lax";
+        return AppServices::I18n::langCookieHeader(lang);
     }
 
     static bool fileExists(const std::string &path)
@@ -619,21 +553,11 @@ namespace Routes
         }
         ctx["title"]       = title;
         ctx["description"] = desc;
-        ctx["lang"]        = lang;
 
-        // -------- Translatable UI strings --------
-        for (const auto &kv : strings()) ctx[kv.first] = t(kv.first);
-
-        // Language label (uppercased code) and is_* flags
-        std::string upper = lang;
-        for (auto &c : upper) c = std::toupper(static_cast<unsigned char>(c));
-        ctx["lang_label"] = upper;
-        ctx["is_en"] = (lang == "en");
-        ctx["is_bg"] = (lang == "bg");
-        ctx["is_ru"] = (lang == "ru");
-        ctx["is_es"] = (lang == "es");
-        ctx["is_tr"] = (lang == "tr");
-        ctx["is_pt"] = (lang == "pt");
+        // -------- Translatable UI strings + lang meta --------
+        // Populates {{lang}}, {{lang_label}}, {{is_en}}..{{is_pt}}, every
+        // {{t_*}} key from public/langs/<lang>.json, and {{js_dict}}.
+        AppServices::I18n::inject(ctx, lang);
 
         // -------- Sidebar / topnav active flags --------
         std::string section = meta ? meta->section : "";
@@ -710,29 +634,17 @@ namespace Routes
             }
         }
 
-        // -------- Content (load page fragment with EN fallback) --------
+        // -------- Content (single canonical template per page) --------
+        // Every page is a language-agnostic mustache template with
+        // {{t_page_<slug>_e###}} placeholders. Per-lang copies were
+        // eliminated once all body prose was extracted to public/langs/.
         std::string content;
-        bool translation_pending = false;
         if (found)
         {
-            std::string fileLang  = "public/pages/" + lang + "/" + page_key + ".html";
-            std::string fileEn    = "public/pages/en/" + page_key + ".html";
-            std::string fileBg    = "public/pages/bg/" + page_key + ".html";
-
-            std::string chosen;
-            if (fileExists(fileLang)) {
-                chosen = fileLang;
-            } else if (lang != "en" && fileExists(fileEn)) {
-                chosen = fileEn;
-                translation_pending = (lang != "en");
-            } else if (fileExists(fileBg)) {
-                chosen = fileBg;
-            }
-
-            if (!chosen.empty())
+            std::string file = "public/pages/" + page_key + ".html";
+            if (fileExists(file))
             {
-                std::string raw = readFile(chosen);
-                // Render the page itself through mustache so it picks up t_* vars and shared ctx
+                std::string raw = readFile(file);
                 auto pageTpl = crow::mustache::compile(raw);
                 content = pageTpl.render_string(ctx);
             }
@@ -744,12 +656,6 @@ namespace Routes
         else
         {
             content = "<h1>" + t("t_404_title") + "</h1><p>" + t("t_404_body") + "</p>";
-        }
-
-        if (translation_pending)
-        {
-            content = "<div class=\"admonition note\"><div class=\"admonition-title\">i18n</div><p>" +
-                      t("t_translation_pending") + "</p></div>" + content;
         }
 
         ctx["content"] = content;

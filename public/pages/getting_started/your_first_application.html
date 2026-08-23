@@ -1,0 +1,50 @@
+<h1>{{{t_page_getting_started_your_first_application_e001}}}</h1>
+<p>{{{t_page_getting_started_your_first_application_e002}}}</p>
+<h2 id="include">{{{t_page_getting_started_your_first_application_e003}}}</h2>
+<p>{{{t_page_getting_started_your_first_application_e004}}}</p>
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+</code></pre>
+<p>{{{t_page_getting_started_your_first_application_e005}}}</p>
+<h2 id="app-declaration">{{{t_page_getting_started_your_first_application_e006}}}</h2>
+<p>{{{t_page_getting_started_your_first_application_e007}}}</p>
+<pre><code class="language-cpp">int main()
+{
+    crow::SimpleApp app;
+}
+</code></pre>
+<p>{{{t_page_getting_started_your_first_application_e008}}}</p>
+<h2 id="adding-routes">{{{t_page_getting_started_your_first_application_e009}}}</h2>
+<p>{{{t_page_getting_started_your_first_application_e010}}}</p>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/")([] {
+    return "Hello from Garvan!";
+});
+</code></pre>
+<p>{{{t_page_getting_started_your_first_application_e011}}}</p>
+<h2 id="running">{{{t_page_getting_started_your_first_application_e012}}}</h2>
+<p>{{{t_page_getting_started_your_first_application_e013}}}</p>
+<pre><code class="language-cpp">app.port(9090).multithreaded().run();
+</code></pre>
+<p>{{{t_page_getting_started_your_first_application_e014}}}</p>
+<h2 id="full-example">{{{t_page_getting_started_your_first_application_e015}}}</h2>
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+
+int main()
+{
+    crow::SimpleApp app;
+
+    CROW_ROUTE(app, "/")([] {
+        return "Hello from Garvan!";
+    });
+
+    app.port(9090).multithreaded().run();
+}
+</code></pre>
+<p>{{{t_page_getting_started_your_first_application_e016}}}</p>
+<div class="page-nav">
+<a class="prev" href="/getting_started/project_templates">
+<span class="label">{{t_prev}}</span><span class="title">Project templates</span>
+</a>
+<a class="next" href="/getting_started/a_simple_webpage">
+<span class="label">{{t_next}}</span><span class="title">A simple webpage</span>
+</a>
+</div>

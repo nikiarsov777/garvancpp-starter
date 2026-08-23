@@ -1,0 +1,33 @@
+<h1>{{{t_page_garvan_migrations_e001}}}</h1>
+<p>{{{t_page_garvan_migrations_e002}}}</p>
+<h2 id="running">{{{t_page_garvan_migrations_e003}}}</h2>
+<pre><code class="language-bash">./vendors/Garvan/garvan-migrate up        # apply pending migrations
+./vendors/Garvan/garvan-migrate down      # revert the last applied migration
+./vendors/Garvan/garvan-migrate status    # show what's pending / applied
+</code></pre>
+<p>{{{t_page_garvan_migrations_e004}}}</p>
+<h2 id="writing">{{{t_page_garvan_migrations_e005}}}</h2>
+<p>{{{t_page_garvan_migrations_e006}}}</p>
+<pre><code class="language-bash">-- migrate:up
+CREATE TABLE posts (
+    id          serial PRIMARY KEY,
+    title       text NOT NULL,
+    body        text,
+    user_id     integer REFERENCES users(id),
+    created_at  timestamp DEFAULT now()
+);
+
+-- migrate:down
+DROP TABLE posts;
+</code></pre>
+<p>{{{t_page_garvan_migrations_e007}}}</p>
+<h2 id="rollback">{{{t_page_garvan_migrations_e008}}}</h2>
+<p>{{{t_page_garvan_migrations_e009}}}</p>
+<div class="admonition note">
+<div class="admonition-title">MongoDB</div>
+<p>{{{t_page_garvan_migrations_e010}}}</p>
+</div>
+<div class="page-nav">
+<a class="prev" href="/garvan/services"><span class="label">{{t_prev}}</span><span class="title">Services</span></a>
+<a class="next" href="/garvan/kalpasan"><span class="label">{{t_next}}</span><span class="title">Kalpasan CLI</span></a>
+</div>

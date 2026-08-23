@@ -1,0 +1,35 @@
+<h1>{{{t_page_guides_app_e001}}}</h1>
+<p>{{{t_page_guides_app_e002}}}</p>
+<h2 id="simpleapp">{{{t_page_guides_app_e003}}}</h2>
+<p>{{{t_page_guides_app_e004}}}</p>
+<pre><code class="language-cpp">crow::SimpleApp app;
+CROW_ROUTE(app, "/")([] { return "ok"; });
+app.port(9090).run();
+</code></pre>
+<h2 id="app-with-middleware">{{{t_page_guides_app_e005}}}</h2>
+<p>{{{t_page_guides_app_e006}}}</p>
+<pre><code class="language-cpp">struct AuthMW { struct context {}; void before_handle(...) {} void after_handle(...) {} };
+
+crow::App&lt;AuthMW&gt; app;
+</code></pre>
+<h2 id="chaining">{{{t_page_guides_app_e007}}}</h2>
+<p>{{{t_page_guides_app_e008}}}</p>
+<pre><code class="language-cpp">app.bindaddr("0.0.0.0")
+   .port(9090)
+   .multithreaded()
+   .run();
+</code></pre>
+<h2 id="async">{{{t_page_guides_app_e009}}}</h2>
+<p>{{{t_page_guides_app_e010}}}</p>
+<pre><code class="language-cpp">auto handle = app.port(9090).run_async();
+// ... do other work ...
+app.stop();
+</code></pre>
+<div class="page-nav">
+<a class="prev" href="/getting_started/a_simple_webpage">
+<span class="label">{{t_prev}}</span><span class="title">A simple webpage</span>
+</a>
+<a class="next" href="/guides/routes">
+<span class="label">{{t_next}}</span><span class="title">Routes</span>
+</a>
+</div>

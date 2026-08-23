@@ -1,0 +1,30 @@
+<h1>{{{t_page_guides_testing_e001}}}</h1>
+<p>{{{t_page_guides_testing_e002}}}</p>
+<h2 id="unit-tests">{{{t_page_guides_testing_e003}}}</h2>
+<pre><code class="language-cpp">#include "crow.h"
+#include "doctest.h"
+
+TEST_CASE("hello returns greeting") {
+    crow::SimpleApp app;
+    CROW_ROUTE(app, "/")([] { return "hi"; });
+
+    crow::request req;
+    req.url = "/";
+    crow::response res;
+    app.handle(req, res);
+
+    CHECK(res.code == 200);
+    CHECK(res.body == "hi");
+}
+</code></pre>
+<h2 id="integration">{{{t_page_guides_testing_e004}}}</h2>
+<p>{{{t_page_guides_testing_e005}}}</p>
+<pre><code class="language-cpp">auto handle = app.port(0).run_async();   // port 0 = auto-pick
+auto port   = app.port();                  // discover the bound port
+// ... issue requests against http://localhost:port ...
+app.stop();
+</code></pre>
+<div class="page-nav">
+<a class="prev" href="/guides/base64"><span class="label">{{t_prev}}</span><span class="title">Base64</span></a>
+<a class="next" href="/guides/auth"><span class="label">{{t_next}}</span><span class="title">HTTP authorization</span></a>
+</div>

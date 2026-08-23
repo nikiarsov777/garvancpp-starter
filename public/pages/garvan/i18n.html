@@ -1,0 +1,139 @@
+<h1>{{{t_page_garvan_i18n_e001}}}</h1>
+<p>{{{t_page_garvan_i18n_e002}}}</p>
+
+<h2 id="overview">{{{t_page_garvan_i18n_e003}}}</h2>
+<p>{{{t_page_garvan_i18n_e004}}}</p>
+<p>{{{t_page_garvan_i18n_e005}}}</p>
+
+<h2 id="layout">{{{t_page_garvan_i18n_e006}}}</h2>
+<p>{{{t_page_garvan_i18n_e007}}}</p>
+<pre><code>public/
+├── langs/
+│   ├── en.json    ← default + ultimate fallback
+│   ├── bg.json
+│   ├── ru.json
+│   ├── es.json
+│   ├── tr.json
+│   └── pt.json
+└── pages/         ← one canonical template per page
+    ├── home.html, license.html, privacy.html, reference.html
+    ├── garvan/            (12 pages)
+    ├── getting_started/   (6 pages)
+    └── guides/            (20 pages)
+</code></pre>
+<p>{{{t_page_garvan_i18n_e008}}}</p>
+
+<h2 id="components">{{{t_page_garvan_i18n_e009}}}</h2>
+<table>
+    <thead>
+        <tr>
+            <th>{{{t_page_garvan_i18n_e010}}}</th>
+            <th>{{{t_page_garvan_i18n_e011}}}</th>
+            <th>{{{t_page_garvan_i18n_e012}}}</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>AppServices::I18n</code></td>
+            <td><code>app/services/I18n.{h,cpp}</code></td>
+            <td>{{{t_page_garvan_i18n_e013}}}</td>
+        </tr>
+        <tr>
+            <td><code>Routes::DocsRouter</code></td>
+            <td><code>routes/DocsRouter.cpp</code></td>
+            <td>{{{t_page_garvan_i18n_e014}}}</td>
+        </tr>
+        <tr>
+            <td>Crow mustache</td>
+            <td><em>framework</em></td>
+            <td>{{{t_page_garvan_i18n_e015}}}</td>
+        </tr>
+        <tr>
+            <td><code>tools/extract_docs_i18n.py</code></td>
+            <td><code>tools/</code></td>
+            <td>{{{t_page_garvan_i18n_e016}}}</td>
+        </tr>
+        <tr>
+            <td><code>tools/extract_pages_i18n.py</code></td>
+            <td><code>tools/</code></td>
+            <td>{{{t_page_garvan_i18n_e017}}}</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2 id="lifecycle">{{{t_page_garvan_i18n_e018}}}</h2>
+<ol>
+    <li>{{{t_page_garvan_i18n_e019}}}</li>
+    <li>{{{t_page_garvan_i18n_e020}}}</li>
+    <li>{{{t_page_garvan_i18n_e021}}}</li>
+    <li>{{{t_page_garvan_i18n_e022}}}</li>
+    <li>{{{t_page_garvan_i18n_e023}}}</li>
+</ol>
+
+<h2 id="fallback">{{{t_page_garvan_i18n_e024}}}</h2>
+<p>{{{t_page_garvan_i18n_e025}}}</p>
+<pre><code>current lang → EN → literal key name
+</code></pre>
+
+<h2 id="lang-switch">{{{t_page_garvan_i18n_e026}}}</h2>
+<p>{{{t_page_garvan_i18n_e027}}}</p>
+<pre><code>GET /lang/&lt;code&gt;
+  → Set-Cookie: lang=&lt;code&gt;; Path=/; Max-Age=31536000; SameSite=Lax
+  → 302 redirect to Referer
+</code></pre>
+<p>{{{t_page_garvan_i18n_e028}}}</p>
+
+<h2 id="add-key">{{{t_page_garvan_i18n_e029}}}</h2>
+<p>{{{t_page_garvan_i18n_e030}}}</p>
+<pre><code>// public/langs/en.json
+{
+  "t_my_new_key": "Hello world",
+  ...
+}
+
+// public/langs/bg.json
+{
+  "t_my_new_key": "Здравей, свят",
+  ...
+}
+</code></pre>
+<p>{{{t_page_garvan_i18n_e031}}}</p>
+<pre><code>&lt;h1&gt;{{t_my_new_key}}&lt;/h1&gt;              &lt;!-- HTML-escaped --&gt;
+&lt;div&gt;{{{t_my_new_key}}}&lt;/div&gt;            &lt;!-- raw HTML --&gt;
+</code></pre>
+<p>{{{t_page_garvan_i18n_e032}}}</p>
+
+<h2 id="add-page">{{{t_page_garvan_i18n_e033}}}</h2>
+<ol>
+    <li>{{{t_page_garvan_i18n_e034}}}</li>
+    <li>{{{t_page_garvan_i18n_e035}}}</li>
+    <li>{{{t_page_garvan_i18n_e036}}}</li>
+    <li>{{{t_page_garvan_i18n_e037}}}</li>
+</ol>
+<pre><code>// routes/DocsRouter.cpp — pages() entry
+{"garvan/mypage", {
+    "garvan/mypage", "garvan",
+    "My page", "Моята страница",
+    "Short description.", "Кратко описание.",
+    {
+        {"section-a", "Section A", "Раздел A", false},
+    },
+    "garvan/prev", "garvan/next"
+}},
+</code></pre>
+
+<h2 id="js-dict">{{{t_page_garvan_i18n_e038}}}</h2>
+<p>{{{t_page_garvan_i18n_e039}}}</p>
+<pre><code>&lt;!-- somewhere in your template --&gt;
+{{{js_dict}}}
+
+&lt;script&gt;
+  console.log(window.T.t_nav_home);  // "Home" / "Начало" / ...
+  console.log(window.T.lang);        // "en" / "bg" / ...
+&lt;/script&gt;
+</code></pre>
+
+<div class="page-nav">
+    <a class="prev" href="/garvan/helpers"><span class="label">{{t_prev}}</span><span class="title">Helpers</span></a>
+    <a class="next" href="/reference"><span class="label">{{t_next}}</span><span class="title">API Reference</span></a>
+</div>

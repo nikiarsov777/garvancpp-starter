@@ -70,7 +70,9 @@ The HTTP server is started in `main.cpp:16` and listens on **port 9090** by defa
 
 ### Requirements
 
-- GCC 11+ or Clang 12+ (C++20).
+- GCC 11+ or Clang 12+ (C++20) for building the starter app.
+- **Rebuilding the vendor from source** (`libgarvan.a`) requires **GCC 14+
+  or Clang 18+** (C++23: `deducing this`, `std::expected`) and CMake 3.16+.
 - CMake 3.20 or later.
 - Asio 1.28+ development headers.
 - Database client libraries: `libpqxx`, `libmysqlcppconn`, `libsqlite3`,
@@ -250,6 +252,21 @@ Copy the freshly built `libgarvan.a` (and any updated headers under `include/`)
 over the files in your project's `vendors/Garvan/` directory, then rebuild the
 app with `cmake --build build -j` or `./make.sh`.
 
+The vendor tree ships its own `make.sh` — a thin wrapper around CMake
+that performs an incremental build and then **auto-syncs** the
+resulting `libgarvan.a`, `garvan-migrate`, `kalpasan`, `crow.h` and
+public headers into `../garvancpp-starter/vendors/Garvan/`:
+
+```bash
+./make.sh              # incremental build + sync
+./make.sh clean        # full rebuild
+JOBS=8 ./make.sh       # override parallel jobs (default: 4)
+```
+
+Never pass a bare `-j` to `cmake --build` in the vendor tree — with the
+Makefile generator that expands to `make -j` (unbounded jobs → swap
+thrashing). The vendor script always passes a concrete `-j "$JOBS"`.
+
 ### Typed ORM pipeline (`TypedQuery<T>`)
 
 The classic Garvan chain (`Model::where<T>(...)->first()`) returns
@@ -275,10 +292,19 @@ User u = User::findAs<User>(id);
 u.remove();                        // DELETE FROM users WHERE id=<hydrated>
 
 // (4) Bulk UPDATE / DELETE — empty WHERE throws
-User::query<User>()->where("active","=", false)
-                   ->update({{"deleted_at", now}});
+
+// Status transition (state machine on a cohort)
+Invoice::query<Invoice>()->where("status","=","pending")
+                        ->update({{"status","sent"},
+                                  {"sent_at", now}});
+
+// Soft-delete on a coherent cohort
+User::query<User>()->where("banned","=", true)
+                   ->update({{"deleted_at", now}});          // soft-delete
+
+// Hard-delete stale rows
 FcmToken::query<FcmToken>()->where("expires_at","<", now)
-                           ->remove();
+                           ->remove();                        // hard delete
 
 // (5) WHERE ... IS NULL on the typed surface
 Settings s = Settings::query<Settings>()
@@ -330,6 +356,86 @@ Closed gaps from `vendors/Garvan/GARVAN.md`: **Gap 1** (Model IS NULL
 (UPDATE with non-PK WHERE), **Gap 7** (rehydration into model
 instance). Still open: Gap 3 (aggregates), Gap 4 (JOIN emission),
 Gap 5 (last-insert-id), Gap 8 (MonetDB PS bind pipeline).
+
+### C++23 ORM surface
+
+Alongside the typed pipeline the vendor exposes a family of C++23-only
+APIs (all shipped in parallel to the classical ones — full BC is
+preserved). To rebuild the vendor from source you need **GCC 14+ or
+Clang 18+** (for `deducing this` and `std::expected`).
+
+**1. `ModelType` concept for static factories.**
+
+```cpp
+template <ModelType T>
+static T* where(std::string field, std::string value);
+// ModelType = std::derived_from<T, Garvan::Model>
+//          && std::is_default_constructible_v<T>
+```
+
+Errors on a wrong `T` are short and readable instead of pages of
+template noise.
+
+**2. No more `delete this` — scratchpad ownership.**
+
+Terminal methods (`get`, `find`, `first`, …) no longer `delete this`.
+Stack instances are safe. Models returned from static `where<T>()`
+live in a `thread_local` scratchpad, cleared on the next `where<T>()`
+on the same thread or via an explicit call:
+
+```cpp
+Garvan::Model::flushScratch();
+```
+
+**3. Typed WHERE overloads.**
+
+```cpp
+builder->where("id", "=", 42);                // int  -> "42"
+builder->where("active", "=", true);          // bool -> "true"
+builder->where("deleted_at", "IS", nullptr);  //      -> "NULL"
+```
+
+Concept-guarded overloads for `integral` / `floating_point` / `bool` /
+`nullptr_t`. The existing string API stays intact.
+
+**4. Deducing-`this` fluent value chain.**
+
+```cpp
+Builder b(...);
+b.whereRef("id", "1").whereRef("age", ">", "18").get();
+```
+
+`whereRef` returns `Self&` instead of `Self*`, enabling value chains
+on stack builders. The old `Builder* where(...)` is kept for BC.
+
+**5. `std::expected<json, DbError>` instead of exceptions.**
+
+```cpp
+auto result = user->tryFirst();
+if (!result) {
+    log(result.error().message);
+    return;
+}
+json data = *result;
+```
+
+`DbError::Code = { Connection, Syntax, Constraint, NotFound, Unknown }`.
+Classification is currently heuristic (matched on `what()`); precise
+SQLSTATE-driven classification lands in a future connection-layer
+extension. Throwing methods (`get`, `first`, `find*`) are kept for BC.
+
+**6. Hygiene.**
+
+- `[[nodiscard]]` on all query terminals and getters.
+- `std::string_view` overloads in `where`, `sanitizeOperator`,
+  `sanitizeOrderBy`, `assertSafeIdentifier`.
+- Operator allowlist is a `constexpr std::array` — no runtime heap
+  allocation for the static set.
+- Include guards renamed to `GARVAN_*`.
+- `#include <pqxx/pqxx>` removed from `orm/omodel.h` (ORM-neutral
+  header).
+
+See `vendors/Garvan/README.md` for the full vendor-side change log.
 
 ### Kalpasan CLI
 
@@ -524,6 +630,44 @@ Useful entry points:
 All pages are available in English, Bulgarian, Spanish, Portuguese, Russian and
 Turkish — switch with `GET /lang/<code>`.
 
+### Internationalisation (i18n)
+
+The docs site (and any consumer page) is served through a
+dictionary-backed i18n pipeline. Every page is **one canonical mustache
+template** with `{{t_...}}` placeholders; the actual text lives in
+per-language JSON dictionaries loaded at boot.
+
+```
+public/
+├── langs/                     # one flat JSON dict per language
+│   ├── en.json                # default + ultimate fallback
+│   ├── bg.json
+│   └── {ru,es,tr,pt}.json
+└── pages/                     # 42 canonical templates (language-agnostic)
+    ├── home.html, license.html, privacy.html, reference.html
+    ├── garvan/            (13 pages)
+    ├── getting_started/   (6 pages)
+    └── guides/            (20 pages)
+```
+
+**Component map:**
+
+| Component                       | File                          | Role                                                                       |
+| ------------------------------- | ----------------------------- | -------------------------------------------------------------------------- |
+| `AppServices::I18n`             | `app/services/I18n.{h,cpp}`   | Lazy-loads dicts, resolves keys with EN fallback, populates mustache ctx.  |
+| `Routes::DocsRouter`            | `routes/DocsRouter.cpp`       | `PageMeta` index, route wiring, delegates translation to `I18n`.           |
+| Crow mustache                   | (framework)                   | Renders `{{t_*}}` tokens against the injected context.                     |
+| `tools/extract_docs_i18n.py`    | `tools/`                      | One-shot migration helper (DocsRouter dict → JSON).                        |
+| `tools/extract_pages_i18n.py`   | `tools/`                      | One-shot migration helper (per-lang HTML → JSON + deploy canonicals).      |
+
+**Fallback chain:** `current lang → EN → literal key name`.
+
+**Language switching:** `GET /lang/<code>` sets a 1-year `lang` cookie;
+`AppServices::I18n::langCookieHeader(lang)` builds the header value.
+
+Full walkthrough with examples: see [`/garvan/i18n`](/garvan/i18n)
+in the running docs site.
+
 ### License
 
 GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
@@ -565,7 +709,9 @@ GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
 
 ### Изисквания
 
-- GCC 11+ или Clang 12+ с поддръжка на C++20.
+- GCC 11+ или Clang 12+ с поддръжка на C++20 за билд на starter-a.
+- **Rebuild на vendor-а от source** (`libgarvan.a`) изисква **GCC 14+
+  или Clang 18+** (C++23: `deducing this`, `std::expected`) и CMake 3.16+.
 - CMake 3.20 или по-нов.
 - Asio 1.28+ development хедъри.
 - Драйвери: `libpqxx`, `libmysqlcppconn`, `libsqlite3`, `libmongoc` /
@@ -700,6 +846,21 @@ cmake --build build -j$(nproc)
 `include/`) върху файловете в `vendors/Garvan/` на проекта и пребилдвайте
 приложението с `cmake --build build -j` или `./make.sh`.
 
+Vendor дървото има свой `make.sh` — thin wrapper над CMake, който прави
+инкрементален билд и после **автоматично синкроне** резултатните
+`libgarvan.a`, `garvan-migrate`, `kalpasan`, `crow.h` и public хедъри
+в `../garvancpp-starter/vendors/Garvan/`:
+
+```bash
+./make.sh              # incremental build + sync
+./make.sh clean        # пълен rebuild
+JOBS=8 ./make.sh       # override parallel jobs (default: 4)
+```
+
+Никога не подавай bare `-j` на `cmake --build` във vendor дървото — при
+Makefile generator това става `make -j` (неограничен брой jobs → swap
+thrashing). Скриптът винаги минава конкретен `-j "$JOBS"`.
+
 ### Типизиран ORM pipeline (`TypedQuery<T>`)
 
 Класическият Garvan chain (`Model::where<T>(...)->first()`) връща
@@ -725,10 +886,19 @@ User u = User::findAs<User>(id);
 u.remove();                        // DELETE FROM users WHERE id=<hydrated>
 
 // (4) Bulk UPDATE / DELETE — празен WHERE => throws
-User::query<User>()->where("active","=", false)
-                   ->update({{"deleted_at", now}});
+
+// Преход между състояния (state machine на cohort)
+Invoice::query<Invoice>()->where("status","=","pending")
+                        ->update({{"status","sent"},
+                                  {"sent_at", now}});
+
+// Логическо изтриване на съгласуван cohort
+User::query<User>()->where("banned","=", true)
+                   ->update({{"deleted_at", now}});          // soft-delete
+
+// Физическо изтриване на изтекли редове
 FcmToken::query<FcmToken>()->where("expires_at","<", now)
-                           ->remove();
+                           ->remove();                        // hard delete
 
 // (5) WHERE ... IS NULL на typed surface
 Settings s = Settings::query<Settings>()
@@ -781,6 +951,87 @@ IS NULL — typed surface), **Gap 2** (DELETE — instance + bulk),
 instance). Остават отворени: Gap 3 (aggregates), Gap 4 (JOIN
 emission), Gap 5 (last-insert-id), Gap 8 (MonetDB PS bind
 pipeline).
+
+### C++23 ORM повърхнина
+
+Освен typed pipeline vendor-ът излага цяло семейство C++23-специфични
+API-та (всички паралелни на класическите — пълна BC е запазена). За
+rebuild на vendor-а от source ти трябва **GCC 14+ или Clang 18+** (за
+`deducing this` и `std::expected`).
+
+**1. `ModelType` concept за static factory-та.**
+
+```cpp
+template <ModelType T>
+static T* where(std::string field, std::string value);
+// ModelType = std::derived_from<T, Garvan::Model>
+//          && std::is_default_constructible_v<T>
+```
+
+Грешките при неправилен `T` са къси и четими вместо страници template
+шум.
+
+**2. Премахнат `delete this` — scratchpad ownership.**
+
+Терминалните методи (`get`, `find`, `first`, …) вече не правят
+`delete this`. Стек-инстанциите са безопасни. Моделите върнати от
+static `where<T>()` живеят в `thread_local` scratchpad, който се
+чисти при следващ `where<T>()` на същия thread или чрез явен:
+
+```cpp
+Garvan::Model::flushScratch();
+```
+
+**3. Typed WHERE overloads.**
+
+```cpp
+builder->where("id", "=", 42);                // int  -> "42"
+builder->where("active", "=", true);          // bool -> "true"
+builder->where("deleted_at", "IS", nullptr);  //      -> "NULL"
+```
+
+Concept-guarded overloads за `integral` / `floating_point` / `bool` /
+`nullptr_t`. Съществуващият string API остава непокътнат.
+
+**4. Deducing-`this` fluent value chain.**
+
+```cpp
+Builder b(...);
+b.whereRef("id", "1").whereRef("age", ">", "18").get();
+```
+
+`whereRef` връща `Self&` вместо `Self*`, което позволява value
+chain-и върху стек builder-и. Старият `Builder* where(...)` е
+пазен за BC.
+
+**5. `std::expected<json, DbError>` вместо exception-и.**
+
+```cpp
+auto result = user->tryFirst();
+if (!result) {
+    log(result.error().message);
+    return;
+}
+json data = *result;
+```
+
+`DbError::Code = { Connection, Syntax, Constraint, NotFound, Unknown }`.
+Класификацията в момента е евристична (по `what()`); прецизна
+SQLSTATE класификация идва в бъдещо разширение на connection layer-а.
+Throwing методите (`get`, `first`, `find*`) се пазят за BC.
+
+**6. Хигиена.**
+
+- `[[nodiscard]]` върху всички query terminals и getters.
+- `std::string_view` overloads в `where`, `sanitizeOperator`,
+  `sanitizeOrderBy`, `assertSafeIdentifier`.
+- Operator allowlist е `constexpr std::array` — няма runtime heap
+  allocation за static set.
+- Include guards преименувани към `GARVAN_*`.
+- `#include <pqxx/pqxx>` премахнат от `orm/omodel.h` (ORM-neutral
+  header).
+
+Виж `vendors/Garvan/README.md` за пълния vendor changelog.
 
 ### Kalpasan CLI
 
@@ -942,6 +1193,44 @@ curl -X POST http://localhost:9090/api/admin/jobs/dispatch \
 
 Всички страници са налични на английски, български, испански, португалски,
 руски и турски — превключете с `GET /lang/<code>`.
+
+### Интернационализация (i18n)
+
+Docs сайтът (и всяка consumer страница) се сервира през речниково-базиран
+i18n pipeline. Всяка страница е **един канoничен mustache темплейт** с
+`{{t_...}}` placeholder-и; реалният текст живее в JSON dict-ове за всеки
+език, заредени при boot.
+
+```
+public/
+├── langs/                     # един flat JSON dict на език
+│   ├── en.json                # default + ultimate fallback
+│   ├── bg.json
+│   └── {ru,es,tr,pt}.json
+└── pages/                     # 42 канонични темплейта (езиково-агностични)
+    ├── home.html, license.html, privacy.html, reference.html
+    ├── garvan/            (13 страници)
+    ├── getting_started/   (6 страници)
+    └── guides/            (20 страници)
+```
+
+**Компоненти:**
+
+| Компонент                       | Файл                          | Роля                                                                       |
+| ------------------------------- | ----------------------------- | -------------------------------------------------------------------------- |
+| `AppServices::I18n`             | `app/services/I18n.{h,cpp}`   | Lazy-load-ва dict-овете, резолвва ключове с EN fallback, попълва mustache ctx. |
+| `Routes::DocsRouter`            | `routes/DocsRouter.cpp`       | `PageMeta` index, route wiring, делегира превода на `I18n`.                |
+| Crow mustache                   | (framework)                   | Рендерира `{{t_*}}` tokens спрямо инжектирания контекст.                   |
+| `tools/extract_docs_i18n.py`    | `tools/`                      | One-shot миграционен helper (DocsRouter dict → JSON).                      |
+| `tools/extract_pages_i18n.py`   | `tools/`                      | One-shot миграционен helper (per-lang HTML → JSON + deploy canonicals).    |
+
+**Fallback верига:** `current lang → EN → литерално име на ключа`.
+
+**Смяна на език:** `GET /lang/<code>` сетва 1-годишен `lang` cookie;
+`AppServices::I18n::langCookieHeader(lang)` строи header стойността.
+
+Пълен walkthrough с примери: виж [`/garvan/i18n`](/garvan/i18n) в
+работещия docs сайт.
 
 ### Лиценз
 

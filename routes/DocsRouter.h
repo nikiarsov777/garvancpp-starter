@@ -6,7 +6,6 @@
 #include "crow.h"
 #include <string>
 #include <vector>
-#include <map>
 #include <unordered_map>
 
 namespace Routes
@@ -40,9 +39,6 @@ namespace Routes
 
         // Page metadata index keyed by URL path (without leading slash). "" = home.
         static const std::unordered_map<std::string, PageMeta> &pages();
-
-        // UI string table: STRINGS[key][lang] = translation
-        static const std::map<std::string, std::map<std::string, std::string>> &strings();
 
         // Default language used when cookie missing or fallback needed.
         static const std::string &defaultLang();

@@ -1,0 +1,35 @@
+<h1>{{{t_page_garvan_services_e001}}}</h1>
+<p>{{{t_page_garvan_services_e002}}}</p>
+<h2 id="base-service">{{{t_page_garvan_services_e003}}}</h2>
+<p>{{{t_page_garvan_services_e004}}}</p>
+<pre><code class="language-cpp">class BaseService : public Helper
+{
+public:
+    virtual json index();
+    virtual json create(json model);
+    json         create(const crow::request &amp;req); // convenience: parse body for you
+    virtual json read(string id);
+    virtual json update(json model);
+    virtual void erease();
+    virtual json getById(string id);
+};
+</code></pre>
+<h2 id="injection">{{{t_page_garvan_services_e005}}}</h2>
+<p>{{{t_page_garvan_services_e006}}}</p>
+<pre><code class="language-cpp">json PostController::index()
+{
+    PostService svc;
+    auto posts = svc.index();
+
+    // post-processing: hide private fields, attach pagination metadata, etc.
+    json out;
+    out["data"]  = posts;
+    out["count"] = posts.size();
+    return out;
+}
+</code></pre>
+<p>{{{t_page_garvan_services_e007}}}</p>
+<div class="page-nav">
+<a class="prev" href="/garvan/controllers"><span class="label">{{t_prev}}</span><span class="title">Controllers</span></a>
+<a class="next" href="/garvan/migrations"><span class="label">{{t_next}}</span><span class="title">Migrations</span></a>
+</div>

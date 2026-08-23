@@ -1,0 +1,31 @@
+<h1>{{{t_page_guides_middleware_e001}}}</h1>
+<p>{{{t_page_guides_middleware_e002}}}</p>
+<h2 id="concept">{{{t_page_guides_middleware_e003}}}</h2>
+<p>{{{t_page_guides_middleware_e004}}}</p>
+<h2 id="writing">{{{t_page_guides_middleware_e005}}}</h2>
+<pre><code class="language-cpp">struct Timer
+{
+    struct context {
+        std::chrono::steady_clock::time_point start;
+    };
+
+    void before_handle(crow::request &amp;, crow::response &amp;, context &amp;ctx) {
+        ctx.start = std::chrono::steady_clock::now();
+    }
+
+    void after_handle(crow::request &amp;, crow::response &amp;res, context &amp;ctx) {
+        auto ms = std::chrono::duration_cast&lt;std::chrono::milliseconds&gt;(
+            std::chrono::steady_clock::now() - ctx.start).count();
+        res.set_header("X-Render-Time", std::to_string(ms) + "ms");
+    }
+};
+</code></pre>
+<h2 id="using">{{{t_page_guides_middleware_e006}}}</h2>
+<p>{{{t_page_guides_middleware_e007}}}</p>
+<pre><code class="language-cpp">crow::App&lt;Timer&gt; app;
+</code></pre>
+<p>{{{t_page_guides_middleware_e008}}}</p>
+<div class="page-nav">
+<a class="prev" href="/guides/query_string"><span class="label">{{t_prev}}</span><span class="title">Query strings</span></a>
+<a class="next" href="/guides/ssl"><span class="label">{{t_next}}</span><span class="title">SSL</span></a>
+</div>

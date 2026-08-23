@@ -1,0 +1,42 @@
+<h1>{{{t_page_garvan_controllers_e001}}}</h1>
+<p>{{{t_page_garvan_controllers_e002}}}</p>
+<h2 id="base-controller">{{{t_page_garvan_controllers_e003}}}</h2>
+<p>{{{t_page_garvan_controllers_e004}}}</p>
+<pre><code class="language-cpp">class BaseContoller : public Helper
+{
+public:
+    virtual json index() = 0;          // GET /resource
+    json         create(json model);   // POST /resource
+    json         read(string id);      // GET /resource/:id
+    json         update(json model);   // PUT /resource/:id
+    void         erease();             // DELETE /resource/:id
+    json         getById(string id);
+};
+</code></pre>
+<p>{{{t_page_garvan_controllers_e005}}}</p>
+<h2 id="rest-actions">{{{t_page_garvan_controllers_e006}}}</h2>
+<p>{{{t_page_garvan_controllers_e007}}}</p>
+<pre><code class="language-cpp">// app/controllers/api/PostController.h
+#pragma once
+#include "controller/BaseContoller.h"
+#include "../../services/PostService.h"
+
+class PostController : public Garvan::BaseContoller
+{
+public:
+    json index() override {
+        PostService svc;
+        return svc.index();
+    }
+};
+</code></pre>
+<p>{{{t_page_garvan_controllers_e008}}}</p>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/api/posts")([] {
+    PostController c;
+    return jsonresponse{ c.index() };
+});
+</code></pre>
+<div class="page-nav">
+<a class="prev" href="/garvan/models"><span class="label">{{t_prev}}</span><span class="title">Models</span></a>
+<a class="next" href="/garvan/services"><span class="label">{{t_next}}</span><span class="title">Services</span></a>
+</div>

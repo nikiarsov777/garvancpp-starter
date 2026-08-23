@@ -40,8 +40,19 @@
     <summary>{{t_nav_garvan}}</summary>
     <ul>
         <li><a href="/garvan/env" class="{{#p_env}}active{{/p_env}}">{{t_side_env}}</a></li>
-        <li><a href="/garvan/orm" class="{{#p_orm}}active{{/p_orm}}">{{t_side_orm}}</a></li>
-        <li><a href="/garvan/models" class="{{#p_models}}active{{/p_models}}">{{t_side_models}}</a></li>
+        <li>
+            <a href="/garvan/orm" class="{{#p_orm}}active{{/p_orm}}">{{t_side_orm}}</a>
+            <ul>
+                <li><a href="/garvan/orm#typed-query">TypedQuery&lt;T&gt;</a></li>
+                <li><a href="/garvan/orm#cpp23-api">C++23 API</a></li>
+            </ul>
+        </li>
+        <li>
+            <a href="/garvan/models" class="{{#p_models}}active{{/p_models}}">{{t_side_models}}</a>
+            <ul>
+                <li><a href="/garvan/models#update-pipeline">Update pipeline</a></li>
+            </ul>
+        </li>
         <li><a href="/garvan/controllers" class="{{#p_controllers}}active{{/p_controllers}}">{{t_side_controllers}}</a></li>
         <li><a href="/garvan/services" class="{{#p_services}}active{{/p_services}}">{{t_side_services}}</a></li>
         <li><a href="/garvan/migrations" class="{{#p_migrations}}active{{/p_migrations}}">{{t_side_migrations}}</a></li>
@@ -51,6 +62,7 @@
         <li><a href="/garvan/mail" class="{{#p_mail}}active{{/p_mail}}">{{t_side_mail}}</a></li>
         <li><a href="/garvan/databases" class="{{#p_databases}}active{{/p_databases}}">{{t_side_databases}}</a></li>
         <li><a href="/garvan/helpers" class="{{#p_helpers}}active{{/p_helpers}}">{{t_side_helpers}}</a></li>
+        <li><a href="/garvan/i18n" class="{{#p_i18n}}active{{/p_i18n}}">{{t_side_i18n}}</a></li>
     </ul>
 </details>
 

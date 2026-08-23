@@ -1,0 +1,74 @@
+<h1>{{{t_page_getting_started_setup_linux_e001}}}</h1>
+<p>{{{t_page_getting_started_setup_linux_e002}}}</p>
+<h2 id="requirements">{{{t_page_getting_started_setup_linux_e003}}}</h2>
+<ul>
+<li>{{{t_page_getting_started_setup_linux_e004}}}</li>
+<li>{{{t_page_getting_started_setup_linux_e005}}}</li>
+<li>{{{t_page_getting_started_setup_linux_e006}}}</li>
+<li>{{{t_page_getting_started_setup_linux_e007}}}</li>
+<li>{{{t_page_getting_started_setup_linux_e008}}}</li>
+<li>{{{t_page_getting_started_setup_linux_e009}}}</li>
+</ul>
+<div class="admonition note">
+<div class="admonition-title">Note</div>
+<p>{{{t_page_getting_started_setup_linux_e010}}}</p>
+</div>
+<h2 id="install-libgarvan">{{{t_page_getting_started_setup_linux_e011}}}</h2>
+<p>{{{t_page_getting_started_setup_linux_e012}}}</p>
+<pre><code class="language-bash">git clone https://github.com/nikiarsov777/garvan-starter.git my-app
+cd my-app
+</code></pre>
+<p>{{{t_page_getting_started_setup_linux_e013}}}</p>
+<pre><code class="language-bash">sudo apt update
+sudo apt install -y \
+    build-essential cmake \
+    libasio-dev libssl-dev zlib1g-dev \
+    libcurl4-openssl-dev \
+    libpqxx-dev libmysqlcppconn-dev libsqlite3-dev \
+    libmongoc-dev libbson-dev
+</code></pre>
+<div class="admonition note">
+<div class="admonition-title">libcurl auto-linked</div>
+<p>{{{t_page_getting_started_setup_linux_e014}}}</p>
+</div>
+<h2 id="build-from-source">{{{t_page_getting_started_setup_linux_e015}}}</h2>
+<p>{{{t_page_getting_started_setup_linux_e016}}}</p>
+<pre><code class="language-bash">git clone https://github.com/nikiarsov777/garvancpp-starter.git
+cd garvan
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+sudo cmake --install build
+</code></pre>
+<h2 id="compile-your-project">{{{t_page_getting_started_setup_linux_e017}}}</h2>
+<p>{{{t_page_getting_started_setup_linux_e018}}}</p>
+<pre><code class="language-cmake">cmake_minimum_required(VERSION 3.20)
+project(MyApp CXX)
+set(CMAKE_CXX_STANDARD 23)
+
+add_executable(my_app main.cpp)
+
+target_include_directories(my_app PRIVATE
+    vendors/Garvan
+    vendors/Garvan/include
+)
+
+target_link_libraries(my_app PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendors/Garvan/libgarvan.a
+    pthread
+)
+</code></pre>
+<p>{{{t_page_getting_started_setup_linux_e019}}}</p>
+<pre><code class="language-bash">cmake -S . -B build
+cmake --build build
+./build/my_app
+</code></pre>
+<div class="page-nav">
+<a class="prev" href="/">
+<span class="label">{{t_prev}}</span>
+<span class="title">Home</span>
+</a>
+<a class="next" href="/getting_started/setup_macos">
+<span class="label">{{t_next}}</span>
+<span class="title">Setup on macOS</span>
+</a>
+</div>

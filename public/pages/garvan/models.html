@@ -1,0 +1,67 @@
+<h1>{{{t_page_garvan_models_e001}}}</h1>
+<p>{{{t_page_garvan_models_e002}}}</p>
+<h2 id="base-model">{{{t_page_garvan_models_e003}}}</h2>
+<p>{{{t_page_garvan_models_e004}}}</p>
+<pre><code class="language-cpp">// app/models/Post.h
+#pragma once
+#include "orm/omodel.h"
+
+class Post : public ORM::OModel
+{
+public:
+    Post() {
+        table          = "posts";
+        primaryKey     = "id";
+        public_columns  = {"id", "title", "body", "user_id", "created_at"};
+        private_columns = {};
+    }
+};
+</code></pre>
+<h2 id="relations">{{{t_page_garvan_models_e005}}}</h2>
+<p>{{{t_page_garvan_models_e006}}}</p>
+<ul>
+<li>{{{t_page_garvan_models_e007}}}</li>
+<li>{{{t_page_garvan_models_e008}}}</li>
+<li>{{{t_page_garvan_models_e009}}}</li>
+<li>{{{t_page_garvan_models_e010}}}</li>
+</ul>
+<p>{{{t_page_garvan_models_e011}}}</p>
+<pre><code class="language-cpp">User u;
+auto posts = u.find(42).hasMany(Post{}, "user_id", "id").get();
+</code></pre>
+<h2 id="update-pipeline">{{{t_page_garvan_models_e012}}}</h2>
+<p>{{{t_page_garvan_models_e013}}}</p>
+<pre><code class="language-cpp">// Load, mutate, save
+User u = User::query&lt;User&gt;()
+           -&gt;where("email", email)
+           -&gt;firstOrFail();
+u.set("last_login", now);
+u.save();                          // UPDATE users SET ... WHERE id=&lt;hydrated&gt;
+
+// By id
+User u   = User::findAs&lt;User&gt;(id);        // throws if missing
+auto opt = User::tryFindAs&lt;User&gt;(id);
+
+// Instance DELETE
+u.remove();                        // DELETE FROM users WHERE id=&lt;hydrated&gt;
+
+// Bulk (guarded — empty WHERE throws)
+
+// Status transition (state machine on a cohort)
+Invoice::query&lt;Invoice&gt;()-&gt;where("status","=","pending")
+                        -&gt;update({{"status","sent"},
+                                  {"sent_at", now}});
+
+// Soft-delete on a coherent cohort
+User::query&lt;User&gt;()-&gt;where("banned","=", true)
+                   -&gt;update({{"deleted_at", now}});          // soft-delete
+
+// Hard-delete the same cohort
+User::query&lt;User&gt;()-&gt;where("banned","=", true)
+                   -&gt;remove();                                // hard delete
+</code></pre>
+<p>{{{t_page_garvan_models_e014}}}</p>
+<div class="page-nav">
+<a class="prev" href="/garvan/orm"><span class="label">{{t_prev}}</span><span class="title">ORM / Query Builder</span></a>
+<a class="next" href="/garvan/controllers"><span class="label">{{t_next}}</span><span class="title">Controllers</span></a>
+</div>

@@ -1,0 +1,80 @@
+<h1>{{{t_page_garvan_events_e001}}}</h1>
+<p>{{{t_page_garvan_events_e002}}}</p>
+<h2 id="api">{{{t_page_garvan_events_e003}}}</h2>
+<p>{{{t_page_garvan_events_e004}}}</p>
+<pre><code class="language-cpp">// app/events/UserRegistered.h
+#include "events/Event.h"
+#include "tools/JsonValue.h"
+
+namespace AppEvents {
+
+class UserRegistered : public Garvan::Event
+{
+public:
+    UserRegistered() = default;
+    UserRegistered(int id, std::string mail, std::string person)
+        : user_id(id), email(std::move(mail)), name(std::move(person)) {}
+
+    std::string eventName() const override { return "UserRegistered"; }
+
+    Garvan::JsonValue payload() const override;
+    static std::unique_ptr&lt;Garvan::Event&gt;
+        fromPayload(const Garvan::JsonValue&amp; p);
+
+    int         user_id{};
+    std::string email;
+    std::string name;
+};
+
+} // namespace AppEvents
+</code></pre>
+<h2 id="listener">{{{t_page_garvan_events_e005}}}</h2>
+<p>{{{t_page_garvan_events_e006}}}</p>
+<pre><code class="language-cpp">// app/listeners/SendWelcomeEmailListener.h
+#include "events/Listener.h"
+#include "../events/UserRegistered.h"
+
+class SendWelcomeEmailListener
+    : public Garvan::Listener&lt;AppEvents::UserRegistered&gt;
+{
+public:
+    void handle(const AppEvents::UserRegistered&amp; event) override;
+};
+</code></pre>
+<p>{{{t_page_garvan_events_e007}}}</p>
+<h2 id="dispatcher">{{{t_page_garvan_events_e008}}}</h2>
+<pre><code class="language-cpp">#include "events/EventDispatcher.h"
+#include "app/events/UserRegistered.h"
+
+Garvan::EventDispatcher::fire(
+    std::make_unique&lt;AppEvents::UserRegistered&gt;(42, "u@x.com", "Ada"));
+</code></pre>
+<p>{{{t_page_garvan_events_e009}}}</p>
+<h2 id="provider">{{{t_page_garvan_events_e010}}}</h2>
+<p>{{{t_page_garvan_events_e011}}}</p>
+<pre><code class="language-cpp">// app/providers/EventServiceProvider.cpp
+Garvan::EventDispatcher::listen&lt;AppEvents::UserRegistered,
+                                LogRegistrationListener&gt;();
+Garvan::EventDispatcher::listen&lt;AppEvents::UserRegistered,
+                                SendWelcomeEmailListener&gt;();
+
+// Optional: register the event's factory for admin-API `event:fire`
+GARVAN_REGISTER_EVENT(AppEvents::UserRegistered);
+</code></pre>
+<p>{{{t_page_garvan_events_e012}}}</p>
+<p>{{{t_page_garvan_events_e013}}}</p>
+<h2 id="example">{{{t_page_garvan_events_e014}}}</h2>
+<pre>
+GET /api/events/user-registered?email=...&amp;name=...&amp;id=...
+  → EventDispatcher::fire(UserRegistered)
+      → LogRegistrationListener::handle()      (sync log line)
+      → SendWelcomeEmailListener::handle()
+           → JobDispatcher::dispatch(SendTestMail)
+                → SyncDriver (inline)
+                     → SendTestMail::handle()  (libcurl SMTP send)
+</pre>
+<p>{{{t_page_garvan_events_e015}}}</p>
+<div class="page-nav">
+<a class="prev" href="/garvan/jobs"><span class="label">{{t_prev}}</span><span class="title">Jobs</span></a>
+<a class="next" href="/garvan/mail"><span class="label">{{t_next}}</span><span class="title">Mail (SMTP)</span></a>
+</div>

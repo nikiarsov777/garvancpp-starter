@@ -1,0 +1,75 @@
+<h1>{{{t_page_garvan_mail_e001}}}</h1>
+<p>{{{t_page_garvan_mail_e002}}}</p>
+<h2 id="config">{{{t_page_garvan_mail_e003}}}</h2>
+<pre><code class="language-dotenv">MAIL_DRIVER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=465
+MAIL_USERNAME="user@example.com"
+MAIL_PASSWORD="app-password"
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="user@example.com"
+MAIL_FROM_NAME="Your App"
+MAIL_AUTHENTICATION=plain
+</code></pre>
+<table>
+<thead><tr><th>{{{t_page_garvan_mail_e004}}}</th><th>{{{t_page_garvan_mail_e005}}}</th></tr></thead>
+<tbody>
+<tr><td>{{{t_page_garvan_mail_e006}}}</td><td>{{{t_page_garvan_mail_e007}}}</td></tr>
+<tr><td>{{{t_page_garvan_mail_e008}}}</td><td>{{{t_page_garvan_mail_e009}}}</td></tr>
+<tr><td>{{{t_page_garvan_mail_e010}}}</td><td>{{{t_page_garvan_mail_e011}}}</td></tr>
+<tr><td>{{{t_page_garvan_mail_e012}}}</td><td>{{{t_page_garvan_mail_e013}}}</td></tr>
+<tr><td>{{{t_page_garvan_mail_e014}}}</td><td>{{{t_page_garvan_mail_e015}}}</td></tr>
+</tbody>
+</table>
+<p>{{{t_page_garvan_mail_e016}}}</p>
+<h2 id="ports">{{{t_page_garvan_mail_e017}}}</h2>
+<ul>
+<li>{{{t_page_garvan_mail_e018}}}</li>
+<li>{{{t_page_garvan_mail_e019}}}</li>
+<li>{{{t_page_garvan_mail_e020}}}</li>
+</ul>
+<h2 id="html">{{{t_page_garvan_mail_e021}}}</h2>
+<p>{{{t_page_garvan_mail_e022}}}</p>
+<pre><code class="language-bash">curl "http://localhost:9090/api/jobs/send-mail?to=you@x.com&amp;subject=Hi&amp;body=&lt;h1&gt;Hello&lt;/h1&gt;&lt;p&gt;&lt;b&gt;Bold&lt;/b&gt;&lt;/p&gt;"
+</code></pre>
+<h2 id="debug">{{{t_page_garvan_mail_e023}}}</h2>
+<p>{{{t_page_garvan_mail_e024}}}</p>
+<pre><code class="language-cpp">// app/jobs/SendTestMail.cpp
+curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);   // change 0L to 1L
+</code></pre>
+<p>{{{t_page_garvan_mail_e025}}}</p>
+<div class="admonition warning">
+<div class="admonition-title">Do not commit the change</div>
+<p>{{{t_page_garvan_mail_e026}}}</p>
+</div>
+<h2 id="providers">{{{t_page_garvan_mail_e027}}}</h2>
+<p>{{{t_page_garvan_mail_e028}}}</p>
+<pre><code class="language-dotenv">MAIL_HOST=smtp.gmail.com
+MAIL_PORT=465
+MAIL_USERNAME=you@gmail.com
+MAIL_PASSWORD=xxxx-xxxx-xxxx-xxxx    # app password, not your account password
+MAIL_ENCRYPTION=ssl
+MAIL_FROM_ADDRESS=you@gmail.com
+</code></pre>
+<p>{{{t_page_garvan_mail_e029}}}</p>
+<pre><code class="language-dotenv">MAIL_HOST=smtp.sendgrid.net
+MAIL_PORT=587
+MAIL_USERNAME=apikey
+MAIL_PASSWORD=SG.xxxxxxxxxxxxxxxxxxxxxxxx
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=you@yourdomain.com
+</code></pre>
+<p>{{{t_page_garvan_mail_e030}}}</p>
+<pre><code class="language-dotenv">MAIL_HOST=mail.your-host.com
+MAIL_PORT=465
+MAIL_USERNAME=info@yourdomain.com
+MAIL_PASSWORD=your-mailbox-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=info@yourdomain.com
+MAIL_FROM_NAME="Your Brand"
+</code></pre>
+<p>{{{t_page_garvan_mail_e031}}}</p>
+<div class="page-nav">
+<a class="prev" href="/garvan/events"><span class="label">{{t_prev}}</span><span class="title">Events</span></a>
+<a class="next" href="/garvan/databases"><span class="label">{{t_next}}</span><span class="title">Database drivers</span></a>
+</div>

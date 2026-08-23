@@ -1,0 +1,20 @@
+<h1>{{{t_page_guides_query_string_e001}}}</h1>
+<p>{{{t_page_guides_query_string_e002}}}</p>
+<h2 id="basic">{{{t_page_guides_query_string_e003}}}</h2>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/search")([](const crow::request &amp;req) {
+    const char *q = req.url_params.get("q");
+    if (!q) return crow::response(400, "missing q");
+    return crow::response("you searched for: " + std::string(q));
+});
+</code></pre>
+<p>{{{t_page_guides_query_string_e004}}}</p>
+<h2 id="multiple-values">{{{t_page_guides_query_string_e005}}}</h2>
+<p>{{{t_page_guides_query_string_e006}}}</p>
+<pre><code class="language-cpp">auto tags = req.url_params.get_list("tag");
+for (const auto &amp;t : tags) CROW_LOG_INFO &lt;&lt; "tag: " &lt;&lt; t;
+</code></pre>
+<p>{{{t_page_guides_query_string_e007}}}</p>
+<div class="page-nav">
+<a class="prev" href="/guides/multipart"><span class="label">{{t_prev}}</span><span class="title">Multipart</span></a>
+<a class="next" href="/guides/middleware"><span class="label">{{t_next}}</span><span class="title">Middleware</span></a>
+</div>

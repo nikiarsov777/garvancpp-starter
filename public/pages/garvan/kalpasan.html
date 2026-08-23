@@ -1,0 +1,49 @@
+<h1>{{{t_page_garvan_kalpasan_e001}}}</h1>
+<p>{{{t_page_garvan_kalpasan_e002}}}</p>
+<h2 id="install">{{{t_page_garvan_kalpasan_e003}}}</h2>
+<p>{{{t_page_garvan_kalpasan_e004}}}</p>
+<pre><code class="language-bash">ln -s vendors/Garvan/kalpasan kalpasan
+./kalpasan --help
+</code></pre>
+<h2 id="commands">{{{t_page_garvan_kalpasan_e005}}}</h2>
+<pre><code class="language-bash">./kalpasan make:model User           # scaffold app/models/User.{h,cpp}
+./kalpasan make:controller User      # scaffold app/controllers/UserController.{h,cpp}
+./kalpasan make:service User         # scaffold app/services/UserService.{h,cpp}
+./kalpasan make:migration create_users
+
+./kalpasan db:migrate                # delegates to garvan-migrate up
+./kalpasan db:rollback               # delegates to garvan-migrate down
+./kalpasan db:seed                   # run files in db/seeders/
+
+./kalpasan serve --watch             # rebuild + restart on .cpp/.h change
+</code></pre>
+<p>{{{t_page_garvan_kalpasan_e006}}}</p>
+<h2 id="runtime-verbs">{{{t_page_garvan_kalpasan_e007}}}</h2>
+<p>{{{t_page_garvan_kalpasan_e008}}}</p>
+<pre><code class="language-bash">./kalpasan job:list                                # GET /api/admin/jobs
+./kalpasan job:dispatch SendTestMail \              # POST /api/admin/jobs/dispatch
+    --field to=you@x.com \
+    --field subject="Hi" \
+    --field body="&lt;h1&gt;Hello&lt;/h1&gt;"
+
+./kalpasan event:list                              # GET /api/admin/events
+./kalpasan event:fire UserRegistered \             # POST /api/admin/events/fire
+    --field id=42 \
+    --field email=you@x.com \
+    --field name="Ada"
+
+./kalpasan route:list                              # print HTTP routes
+./kalpasan config:show                             # dump .env
+./kalpasan config:get MAIL_HOST                    # read one key
+./kalpasan config:set MAIL_HOST smtp.new.com       # rewrite one key
+./kalpasan config:key:generate                     # new APP_KEY (base64 32-byte)
+</code></pre>
+<div class="admonition note">
+<div class="admonition-title">Admin auth guard</div>
+<p>{{{t_page_garvan_kalpasan_e009}}}</p>
+</div>
+<p>{{{t_page_garvan_kalpasan_e010}}}</p>
+<div class="page-nav">
+<a class="prev" href="/garvan/migrations"><span class="label">{{t_prev}}</span><span class="title">Migrations</span></a>
+<a class="next" href="/garvan/jobs"><span class="label">{{t_next}}</span><span class="title">Jobs</span></a>
+</div>

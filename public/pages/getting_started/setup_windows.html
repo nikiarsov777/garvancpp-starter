@@ -1,0 +1,31 @@
+<h1>{{{t_page_getting_started_setup_windows_e001}}}</h1>
+<p>{{{t_page_getting_started_setup_windows_e002}}}</p>
+<h2 id="requirements">{{{t_page_getting_started_setup_windows_e003}}}</h2>
+<ul>
+<li>{{{t_page_getting_started_setup_windows_e004}}}</li>
+<li>{{{t_page_getting_started_setup_windows_e005}}}</li>
+<li>{{{t_page_getting_started_setup_windows_e006}}}</li>
+</ul>
+<h2 id="vcpkg">{{{t_page_getting_started_setup_windows_e007}}}</h2>
+<pre><code class="language-bash">git clone https://github.com/microsoft/vcpkg.git
+.\vcpkg\bootstrap-vcpkg.bat
+.\vcpkg\vcpkg install asio openssl zlib curl libpqxx sqlite3
+</code></pre>
+<h2 id="msvc">{{{t_page_getting_started_setup_windows_e008}}}</h2>
+<p>{{{t_page_getting_started_setup_windows_e009}}}</p>
+<pre><code class="language-bash">cmake -S . -B build ^
+    -DCMAKE_TOOLCHAIN_FILE=<vcpkg-root>/scripts/buildsystems/vcpkg.cmake
+cmake --build build --config Release
+</vcpkg-root></code></pre>
+<div class="admonition warning">
+<div class="admonition-title">Warning</div>
+<p>{{{t_page_getting_started_setup_windows_e010}}}</p>
+</div>
+<div class="page-nav">
+<a class="prev" href="/getting_started/setup_macos">
+<span class="label">{{t_prev}}</span><span class="title">Setup on macOS</span>
+</a>
+<a class="next" href="/getting_started/project_templates">
+<span class="label">{{t_next}}</span><span class="title">Project templates</span>
+</a>
+</div>

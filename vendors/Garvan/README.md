@@ -103,10 +103,19 @@ User u = User::findAs<User>(id);
 u.remove();                        // DELETE ... WHERE id=<hydrated>
 
 // Bulk UPDATE / DELETE (empty WHERE → throws)
-User::query<User>()->where("active","=", false)
-                   ->update({{"deleted_at", now}});
+
+// Преход между състояния (state machine на cohort)
+Invoice::query<Invoice>()->where("status","=","pending")
+                        ->update({{"status","sent"},
+                                  {"sent_at", now}});
+
+// Логическо изтриване на съгласуван cohort
+User::query<User>()->where("banned","=", true)
+                   ->update({{"deleted_at", now}});          // soft-delete
+
+// Физическо изтриване на изтекли редове
 FcmToken::query<FcmToken>()->where("expires_at","<", now)
-                           ->remove();
+                           ->remove();                        // hard delete
 
 // IS NULL на typed surface
 Settings s = Settings::query<Settings>()

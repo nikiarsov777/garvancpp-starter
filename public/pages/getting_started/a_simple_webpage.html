@@ -1,0 +1,53 @@
+<h1>{{{t_page_getting_started_a_simple_webpage_e001}}}</h1>
+<p>{{{t_page_getting_started_a_simple_webpage_e002}}}</p>
+<h2 id="static-page">{{{t_page_getting_started_a_simple_webpage_e003}}}</h2>
+<p>{{{t_page_getting_started_a_simple_webpage_e004}}}</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;body&gt;
+    &lt;p&gt;Hello World!&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p>{{{t_page_getting_started_a_simple_webpage_e005}}}</p>
+<pre><code class="language-cpp">#include "vendors/Garvan/crow.h"
+
+int main()
+{
+    crow::SimpleApp app;
+    crow::mustache::set_global_base("public/");
+
+    CROW_ROUTE(app, "/")([] {
+        return crow::mustache::load_text("fancypage.html");
+    });
+
+    app.port(9090).multithreaded().run();
+}
+</code></pre>
+<p>{{{t_page_getting_started_a_simple_webpage_e006}}}</p>
+<h2 id="with-variable">{{{t_page_getting_started_a_simple_webpage_e007}}}</h2>
+<p>{{{t_page_getting_started_a_simple_webpage_e008}}}</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;body&gt;
+    &lt;p&gt;Hello {{name}}!&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p>{{{t_page_getting_started_a_simple_webpage_e009}}}</p>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/&lt;string&gt;")([](std::string name) {
+    auto page = crow::mustache::load("fancypage.html");
+    crow::mustache::context ctx;
+    ctx["name"] = name;
+    return page.render(ctx);
+});
+</code></pre>
+<p>{{{t_page_getting_started_a_simple_webpage_e010}}}</p>
+<div class="page-nav">
+<a class="prev" href="/getting_started/your_first_application">
+<span class="label">{{t_prev}}</span><span class="title">Your first application</span>
+</a>
+<a class="next" href="/guides/app">
+<span class="label">{{t_next}}</span><span class="title">App</span>
+</a>
+</div>

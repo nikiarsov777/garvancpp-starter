@@ -1,0 +1,29 @@
+<h1>{{{t_page_guides_auth_e001}}}</h1>
+<p>{{{t_page_guides_auth_e002}}}</p>
+<h2 id="basic">{{{t_page_guides_auth_e003}}}</h2>
+<pre><code class="language-cpp">CROW_ROUTE(app, "/admin")([](const crow::request &amp;req) {
+    auto h = req.get_header_value("Authorization");
+    if (h.rfind("Basic ", 0) != 0) return crow::response(401);
+
+    std::string token = h.substr(6);
+    std::string raw   = crow::utility::base64decode(token, token.size());
+    // raw == "user:password"
+    if (raw != "admin:secret") return crow::response(403);
+
+    return crow::response("welcome");
+});
+</code></pre>
+<h2 id="bearer">{{{t_page_guides_auth_e004}}}</h2>
+<p>{{{t_page_guides_auth_e005}}}</p>
+<pre><code class="language-cpp">if (h.rfind("Bearer ", 0) != 0) return crow::response(401);
+std::string jwt = h.substr(7);
+// verify the signature, check claims, etc.
+</code></pre>
+<div class="admonition tip">
+<div class="admonition-title">Tip</div>
+<p>{{{t_page_guides_auth_e006}}}</p>
+</div>
+<div class="page-nav">
+<a class="prev" href="/guides/testing"><span class="label">{{t_prev}}</span><span class="title">Writing tests</span></a>
+<a class="next" href="/guides/included_middleware"><span class="label">{{t_next}}</span><span class="title">Included middlewares</span></a>
+</div>

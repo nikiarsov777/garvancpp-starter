@@ -1,0 +1,110 @@
+<section class="home-hero">
+<img alt="Garvan" class="hero-logo" src="/static/img/garvan.png"/>
+<h1>{{{t_page_home_e001}}}</h1>
+<p class="lead">{{{t_page_home_e002}}}</p>
+<div class="cta-row">
+<a class="btn-primary-garvan" href="/getting_started/setup_linux">Get started</a>
+<a class="btn-outline-garvan" href="/guides/app">Read the guides</a>
+<a class="btn-outline-garvan" href="https://github.com/" rel="noopener" target="_blank">GitHub</a>
+</div>
+</section>
+<section class="feature-grid">
+<div class="feature-card">
+<div class="icon">⚡</div>
+<h3>{{{t_page_home_e003}}}</h3>
+<p>{{{t_page_home_e004}}}</p>
+</div>
+<div class="feature-card">
+<div class="icon">🌐</div>
+<h3>{{{t_page_home_e005}}}</h3>
+<p>{{{t_page_home_e006}}}</p>
+</div>
+<div class="feature-card">
+<div class="icon">🔨</div>
+<h3>{{{t_page_home_e007}}}</h3>
+<p>{{{t_page_home_e008}}}</p>
+</div>
+<div class="feature-card">
+<div class="icon">🔗</div>
+<h3>{{{t_page_home_e009}}}</h3>
+<p>{{{t_page_home_e010}}}</p>
+</div>
+<div class="feature-card">
+<div class="icon">📧</div>
+<h3>{{{t_page_home_e011}}}</h3>
+<p>{{{t_page_home_e012}}}</p>
+</div>
+</section>
+<section class="code-feature">
+<div>
+<h2>{{{t_page_home_e013}}}</h2>
+<p>{{{t_page_home_e014}}}</p>
+</div>
+<pre><code class="language-cpp">#include "crow.h"
+
+int main()
+{
+    crow::SimpleApp app;
+
+    CROW_ROUTE(app, "/")([]{
+        return "Hello from Garvan!";
+    });
+
+    app.port(9090).multithreaded().run();
+}</code></pre>
+</section>
+<section class="code-feature reverse">
+<pre><code class="language-cpp">CROW_ROUTE(app, "/api/users/&lt;int&gt;")
+([](int id) {
+    crow::json::wvalue user;
+    user["id"]    = id;
+    user["name"]  = "Ada";
+    user["email"] = "ada@example.com";
+    return user;
+});</code></pre>
+<div>
+<h2>{{{t_page_home_e015}}}</h2>
+<p>{{{t_page_home_e016}}}</p>
+</div>
+</section>
+<section class="code-feature">
+<div>
+<h2>{{{t_page_home_e017}}}</h2>
+<p>{{{t_page_home_e018}}}</p>
+</div>
+<pre><code class="language-cpp">auto users = db.table("users")
+    .where("active", "=", 1)
+    .order_by("created_at", "desc")
+    .limit(20)
+    .get();</code></pre>
+</section>
+<section>
+<h2 id="install">{{{t_page_home_e019}}}</h2>
+<div class="packages-grid">
+<a href="/getting_started/setup_linux">
+<span class="pkg-name">Linux</span>
+<span class="pkg-desc">apt, AUR, or build from source</span>
+</a>
+<a href="/getting_started/setup_macos">
+<span class="pkg-name">macOS</span>
+<span class="pkg-desc">Homebrew or manual build</span>
+</a>
+<a href="/getting_started/setup_windows">
+<span class="pkg-name">Windows</span>
+<span class="pkg-desc">vcpkg or MSVC</span>
+</a>
+<a href="/getting_started/project_templates">
+<span class="pkg-name">Templates</span>
+<span class="pkg-desc">Starter project scaffolds</span>
+</a>
+</div>
+</section>
+<section style="text-align:center; margin: 56px 0 24px;">
+<h2>{{{t_page_home_e020}}}</h2>
+<p>{{{t_page_home_e021}}}</p>
+<div class="cta-row" style="display:flex; gap:12px; justify-content:center; margin-top: 16px;">
+<a class="btn-primary-garvan" href="/getting_started/your_first_application">First application</a>
+<a class="btn-outline-garvan" href="/guides/app">Guides</a>
+<a class="btn-outline-garvan" href="/reference">API reference</a>
+</div>
+</section>
