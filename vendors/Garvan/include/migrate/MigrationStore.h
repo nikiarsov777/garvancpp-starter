@@ -20,7 +20,7 @@ class MigrationStore
 {
 public:
     // dbtype is the value of <PREFIX>_DATABASE_TYPE env var:
-    //   "postgres", "mysql", "sqlite", "monetdb", "mongodb".
+    //   "postgres", "mysql", "singlestore", "sqlite", "monetdb", "mongodb".
     MigrationStore(DbClient* db, std::string dbtype);
 
     void ensureExists();

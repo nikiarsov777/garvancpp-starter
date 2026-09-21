@@ -318,6 +318,57 @@ json out = Model::rawJson(
 метод със същата сигнатура. Ползвайте `TypedQuery<T>::raw()` за
 chain композиция или директно `model.getBuilder()->raw(...)`.
 
+### 10. SingleStore / MemSQL backend (2026-09-21)
+
+SingleStore (fka MemSQL) е MySQL wire-protocol compatible. Vendor-ът
+го третира като отделен backend (`DATABASE_TYPE=singlestore` в `.env`),
+но reuse-ва `libmysqlcppconn` за transport — не се въвежда нов native
+client.
+
+**Компоненти.**
+
+- `orm/connection/singlestore_connection.{h,cpp}` — thin wrapper върху
+  `libmysqlcppconn`; тялото е идентично на `MysqlConnection`. Държан
+  като отделен клас за симетрия и за бъдещи SingleStore-specific
+  hooks (distributed timeout retry, `USE PARTITION` hints).
+- `orm/grammar/singlestore_grammar.{h,cpp}` — `SinglestoreGrammar :
+  public MySqlGrammar`. В първата ревизия няма override-и; наследява
+  backticks, `?` placeholders и `JSON_ARRAYAGG` / `JSON_OBJECT` (7.5+)
+  emitter-а. Класът съществува като anchor point за бъдещи DDL
+  divergence-и.
+- `DbFactory("singlestore")` route-ва към горните двата класа.
+- Backend allow-list-ите в `migrate/*` (Migration, MigrationRunner,
+  MigrationStore, `migrate_main` help) знаят за `"singlestore"`.
+- Compile-time smoke check: `orm/singlestore_smoke.cpp` държи factory
+  branch-а жив под LTO и static-asserts inheritance chain-а.
+
+**`.env` пример.** Prefix-ът (`SING`, `MEMSQL`, …) е arbitrary — избира се
+от consumer-а и се сочи чрез `MIGRATION_DB`. Важна е стойността
+`singlestore` на `<PREFIX>_DATABASE_TYPE`.
+
+```
+MIGRATION_DB=SING
+
+SING_DATABASE_TYPE=singlestore
+SING_DATABASE_HOST=127.0.0.1
+SING_DATABASE_PORT=3306
+SING_DATABASE_NAME=mydb
+SING_DATABASE_USER=root
+SING_DATABASE_PASSWORD=...
+```
+
+**Известни ограничения** (vendor-ът не ги guard-ва — user отговорност):
+
+- `UPDATE ... LIMIT` не се поддържа върху distributed таблици.
+- Транзакциите имат restricted scope (виж SingleStore docs).
+- DDL за `SHARD KEY` / `SORT KEY` / `ROWSTORE|COLUMNSTORE` се пише raw
+  в миграциите; fluent schema DSL за тях няма (виж §6/§7 gap list).
+
+**Native SingleStore C client** не се използва — MySQL protocol
+покрива 100% от query pipeline-а (SELECT/INSERT/UPDATE/DELETE + JSON
+aggregation). Ако в бъдеще се появи публичен native driver, може да
+се добави като алтернативен connection зад същия backend key.
+
 ### 9. Hygiene
 
 - `[[nodiscard]]` върху всички query terminals и getters.

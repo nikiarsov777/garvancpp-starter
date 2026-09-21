@@ -445,12 +445,13 @@ namespace Routes
             {"garvan/databases", {
                 "garvan/databases", "garvan",
                 "Database drivers", "Драйвери за бази данни",
-                "MySQL, PostgreSQL, MongoDB, MonetDB and SQLite support.", "Поддръжка на MySQL, PostgreSQL, MongoDB, MonetDB и SQLite.",
+                "MySQL, PostgreSQL, MongoDB, MonetDB, SingleStore and SQLite support.", "Поддръжка на MySQL, PostgreSQL, MongoDB, MonetDB, SingleStore и SQLite.",
                 {
                     {"mysql", "MySQL", "MySQL", false},
                     {"postgres", "PostgreSQL", "PostgreSQL", false},
                     {"mongodb", "MongoDB", "MongoDB", false},
                     {"monetdb", "MonetDB", "MonetDB", false},
+                    {"singlestore", "SingleStore", "SingleStore", false},
                     {"sqlite", "SQLite", "SQLite", false},
                 },
                 "garvan/mail", "garvan/helpers"

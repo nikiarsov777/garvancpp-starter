@@ -1,29 +1,70 @@
 <h1>{{{t_page_garvan_databases_e001}}}</h1>
 <p>{{{t_page_garvan_databases_e002}}}</p>
+<p>{{{t_page_garvan_databases_e015}}}</p>
 <h2 id="mysql">{{{t_page_garvan_databases_e003}}}</h2>
 <p>{{{t_page_garvan_databases_e004}}}</p>
-<pre><code class="language-bash">DATABASE_TYPE=mysql
-DATABASE_URL="mysql://user:pass@127.0.0.1:3306/dbname"
+<pre><code class="language-bash">MIGRATION_DB=MYSQL
+
+MYSQL_DATABASE_TYPE=mysql
+MYSQL_DATABASE_HOST=127.0.0.1
+MYSQL_DATABASE_PORT=3306
+MYSQL_DATABASE_NAME=dbname
+MYSQL_DATABASE_USER=user
+MYSQL_DATABASE_PASSWORD=password
 </code></pre>
 <h2 id="postgres">{{{t_page_garvan_databases_e005}}}</h2>
 <p>{{{t_page_garvan_databases_e006}}}</p>
-<pre><code class="language-bash">DATABASE_TYPE=postgres
-DATABASE_URL="postgres://user:pass@127.0.0.1:5432/dbname?sslmode=disable"
+<pre><code class="language-bash">MIGRATION_DB=PSQL
+
+PSQL_DATABASE_TYPE=postgres
+PSQL_DATABASE_HOST=127.0.0.1
+PSQL_DATABASE_PORT=5432
+PSQL_DATABASE_NAME=dbname
+PSQL_DATABASE_USER=user
+PSQL_DATABASE_PASSWORD=password
+PSQL_DATABASE_SCHEMA=public
+PSQL_DATABASE_SSL_MODE=disable
 </code></pre>
 <h2 id="mongodb">{{{t_page_garvan_databases_e007}}}</h2>
 <p>{{{t_page_garvan_databases_e008}}}</p>
-<pre><code class="language-bash">DATABASE_TYPE=mongodb
-DATABASE_URL="mongodb://user:pass@127.0.0.1:27017/dbname"
+<pre><code class="language-bash">MIGRATION_DB=MONGODB
+
+MONGODB_DATABASE_TYPE=mongodb
+MONGODB_DATABASE_HOST=127.0.0.1
+MONGODB_DATABASE_PORT=27017
+MONGODB_DATABASE_NAME=dbname
+MONGODB_DATABASE_USER=user
+MONGODB_DATABASE_PASSWORD=password
 </code></pre>
 <h2 id="monetdb">{{{t_page_garvan_databases_e009}}}</h2>
 <p>{{{t_page_garvan_databases_e010}}}</p>
-<pre><code class="language-bash">DATABASE_TYPE=monetdb
-DATABASE_URL="monetdb://user:pass@127.0.0.1:50000/dbname"
+<pre><code class="language-bash">MIGRATION_DB=MONETDB
+
+MONETDB_DATABASE_TYPE=monetdb
+MONETDB_DATABASE_HOST=127.0.0.1
+MONETDB_DATABASE_PORT=50000
+MONETDB_DATABASE_NAME=dbname
+MONETDB_DATABASE_USER=user
+MONETDB_DATABASE_PASSWORD=password
+MONETDB_DATABASE_SCHEMA=sys
+</code></pre>
+<h2 id="singlestore">{{{t_page_garvan_databases_e013}}}</h2>
+<p>{{{t_page_garvan_databases_e014}}}</p>
+<pre><code class="language-bash">MIGRATION_DB=SING
+
+SING_DATABASE_TYPE=singlestore
+SING_DATABASE_HOST=127.0.0.1
+SING_DATABASE_PORT=3306
+SING_DATABASE_NAME=dbname
+SING_DATABASE_USER=root
+SING_DATABASE_PASSWORD=password
 </code></pre>
 <h2 id="sqlite">{{{t_page_garvan_databases_e011}}}</h2>
 <p>{{{t_page_garvan_databases_e012}}}</p>
-<pre><code class="language-bash">DATABASE_TYPE=sqlite
-DATABASE_URL="sqlite:db/database.sqlite3"
+<pre><code class="language-bash">MIGRATION_DB=SQLITE
+
+SQLITE_DATABASE_TYPE=sqlite
+SQLITE_DATABASE_NAME=db/database.sqlite3
 </code></pre>
 <div class="page-nav">
 <a class="prev" href="/garvan/kalpasan"><span class="label">{{t_prev}}</span><span class="title">Kalpasan CLI</span></a>

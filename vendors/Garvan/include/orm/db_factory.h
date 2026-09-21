@@ -9,12 +9,14 @@
 #include "grammar/mongo_grammar.h"
 #include "grammar/monetdb_grammar.h"
 #include "grammar/sqlite_grammar.h"
+#include "grammar/singlestore_grammar.h"
 
 #include "connection/mysql_connection.h"
 #include "connection/pg_connection.h"
 #include "connection/monetdb_connection.h"
 #include "connection/mongodb_connection.h"
 #include "connection/sqlite_connection.h"
+#include "connection/singlestore_connection.h"
 
 class DbFactory
 {
