@@ -341,6 +341,10 @@ namespace Routes
                     {"builder", "Builder", "Builder", false},
                     {"omodel", "OModel", "OModel", false},
                     {"grammars", "Grammars per database", "Граматики за всяка база", false},
+                    {"typed-query", "TypedQuery<T>", "TypedQuery<T>", false},
+                    {"cpp23-api", "C++23 API", "C++23 API", false},
+                    {"sql-joins", "SQL JOINs", "SQL JOIN-и", false},
+                    {"raw-sql", "Raw SQL", "Raw SQL", false},
                 },
                 "garvan/env", "garvan/models"
             }},

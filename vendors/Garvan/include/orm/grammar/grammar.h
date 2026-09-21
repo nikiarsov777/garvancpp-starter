@@ -25,6 +25,25 @@ namespace Garvan {
         string op;
         string value;
     };
+
+    // ---------------------------------------------------------------
+    // JoinClause — explicit, SQL-shaped JOIN metadata populated by
+    // `Builder::join / leftJoin / rightJoin / innerJoin / crossJoin`.
+    //
+    // Independent от `Builder::joinModel` (което пази ORM-relations
+    // от `hasOne / hasMany / belongsTo / ...`) — там ще ходят
+    // eager-load / eloquent-style JOIN-и, а JoinClause е ниско-нивовият
+    // fluent SQL-join API.
+    // ---------------------------------------------------------------
+    struct JoinClause {
+        enum class Type { Inner, Left, Right, Cross };
+        Type        type = Type::Inner;
+        std::string table;         // right-hand table name (unqualified)
+        std::string leftColumn;    // qualified or unqualified: "t.c" or "c"
+        std::string op = "=";      // comparison operator
+        std::string rightColumn;   // qualified or unqualified
+    };
+
     class Builder;
 }
 
@@ -45,6 +64,13 @@ class Grammar {
 public:
     virtual ~Grammar() = default;
 
+    // Backend-family discriminator за raw() API-то. SQL backends
+    // (Postgres / MySQL / SQLite / MonetDB) връщат `true`; NoSQL
+    // backends (Mongo) — `false`. Ползва се от `Builder::executeRaw()`,
+    // за да реши дали `raw(sql,...)` е валидна операция или трябва да
+    // премине през `rawJson(envelope)`.
+    virtual bool isSql() const { return true; }
+
     // escape identifiers (table, column)
     virtual string wrap(const string& value) const = 0;
 
@@ -55,6 +81,20 @@ public:
     {
         (void)index;
         return "?";
+    }
+
+    // ---------------------------------------------------------------
+    // Wrap a possibly-qualified identifier of the form "table.column".
+    // Splits on a single '.' and quotes each side independently via
+    // wrap(). Falls back to wrap(id) if there's no dot. Used from
+    // compileJoins() so the emitted SQL binds columns to the correct
+    // side of the join.
+    // ---------------------------------------------------------------
+    virtual string wrapQualified(const string& id) const
+    {
+        auto dot = id.find('.');
+        if (dot == string::npos) return wrap(id);
+        return wrap(id.substr(0, dot)) + "." + wrap(id.substr(dot + 1));
     }
 
     // Compile methods now return a PreparedStatement: an SQL string
@@ -175,13 +215,47 @@ protected:
             const auto& w = wheres[i];
             const string op = sanitizeOperator(w.op);
 
-            sql += wrap(w.column) + " " + op + " " + placeholder(params.size());
+            sql += wrapQualified(w.column) + " " + op + " " + placeholder(params.size());
             params.push_back(json(w.value));
 
             if (i != wheres.size() - 1)
                 sql += " AND ";
         }
 
+        return sql;
+    }
+
+    // ---------------------------------------------------------------
+    // Compile a list of JoinClause into ` <type> JOIN <table> ON ...`
+    // fragments. Operator за ON clause се минава през същата allowlist
+    // като WHERE-овете. За CROSS JOIN не се емитва ON.
+    //
+    // Емитираните идентификатори минават през wrapQualified, за да
+    // работи както `users.id` / `orders.user_id`, така и голи
+    // (`id`) — в който случай отговорността за уникалност пада на
+    // caller-а.
+    // ---------------------------------------------------------------
+    virtual string compileJoins(const vector<Garvan::JoinClause>& joins) const
+    {
+        if (joins.empty()) return "";
+
+        string sql;
+        for (const auto& j : joins)
+        {
+            switch (j.type) {
+                case Garvan::JoinClause::Type::Inner: sql += " INNER JOIN "; break;
+                case Garvan::JoinClause::Type::Left:  sql += " LEFT JOIN ";  break;
+                case Garvan::JoinClause::Type::Right: sql += " RIGHT JOIN "; break;
+                case Garvan::JoinClause::Type::Cross: sql += " CROSS JOIN "; break;
+            }
+            sql += wrap(j.table);
+
+            if (j.type == Garvan::JoinClause::Type::Cross) continue;
+
+            const string op = sanitizeOperator(j.op);
+            sql += " ON " + wrapQualified(j.leftColumn) + " " + op + " "
+                         + wrapQualified(j.rightColumn);
+        }
         return sql;
     }
 

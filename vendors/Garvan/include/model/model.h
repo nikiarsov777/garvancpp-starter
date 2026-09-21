@@ -155,6 +155,35 @@ public:
     Model* where(std::string field, std::string op, std::string value);
     Model* with(ORM::OModel model);
 
+    // --- Fluent JOINs (delegating to Builder) ---
+    Model* join(std::string table, std::string left, std::string op, std::string right);
+    Model* join(std::string table, std::string left, std::string right);
+    Model* innerJoin(std::string table, std::string left, std::string op, std::string right);
+    Model* leftJoin(std::string table, std::string left, std::string op, std::string right);
+    Model* leftJoin(std::string table, std::string left, std::string right);
+    Model* rightJoin(std::string table, std::string left, std::string op, std::string right);
+    Model* rightJoin(std::string table, std::string left, std::string right);
+    Model* crossJoin(std::string table);
+
+    // --- Static RAW ---
+    // За SQL backend-и: `raw(sql, params)` / `raw(sql, namedObj)`.
+    // За Mongo: `rawJson(envelope)`. Instance-level chain за raw
+    // не се излага директно на `Model` (за да не влиза в конфликт
+    // със сигнатурите на static-ите); ползвайте `TypedQuery<T>::raw`
+    // за chain композиция или `Model::query<T>()->raw(...)->get()`.
+    static JsonValue raw(std::string_view sql,
+                         std::vector<JsonValue> params = {});
+    static JsonValue raw(std::string_view sql,
+                         std::initializer_list<JsonValue> params);
+    static JsonValue raw(std::string_view sql, JsonValue namedParams);
+    static JsonValue rawJson(JsonValue envelope);
+
+    template <ModelType T>
+    static std::vector<T> rawAs(std::string_view sql,
+                                std::vector<JsonValue> params = {});
+    template <ModelType T>
+    static std::vector<T> rawAs(std::string_view sql, JsonValue namedParams);
+
     // --- Финални методи (ВЕЧЕ БЕЗ delete this) ---
     [[nodiscard]] json get();
     [[nodiscard]] json find(int id);

@@ -83,6 +83,74 @@ public:
         return this;
     }
 
+    // -----------------------------------------------------------
+    // JOINs — прокси към `Builder::join / leftJoin / rightJoin /
+    // innerJoin / crossJoin`. Позволяват typed chain-а да
+    // проектира SQL joins без да пада до getBuilder().
+    // -----------------------------------------------------------
+    TypedQuery* join(std::string_view table, std::string_view left,
+                     std::string_view op, std::string_view right) {
+        instance->getBuilder()->join(table, left, op, right);
+        return this;
+    }
+    TypedQuery* join(std::string_view table, std::string_view left,
+                     std::string_view right) {
+        instance->getBuilder()->join(table, left, right);
+        return this;
+    }
+    TypedQuery* innerJoin(std::string_view table, std::string_view left,
+                          std::string_view op, std::string_view right) {
+        instance->getBuilder()->innerJoin(table, left, op, right);
+        return this;
+    }
+    TypedQuery* leftJoin(std::string_view table, std::string_view left,
+                         std::string_view op, std::string_view right) {
+        instance->getBuilder()->leftJoin(table, left, op, right);
+        return this;
+    }
+    TypedQuery* leftJoin(std::string_view table, std::string_view left,
+                         std::string_view right) {
+        instance->getBuilder()->leftJoin(table, left, right);
+        return this;
+    }
+    TypedQuery* rightJoin(std::string_view table, std::string_view left,
+                          std::string_view op, std::string_view right) {
+        instance->getBuilder()->rightJoin(table, left, op, right);
+        return this;
+    }
+    TypedQuery* rightJoin(std::string_view table, std::string_view left,
+                          std::string_view right) {
+        instance->getBuilder()->rightJoin(table, left, right);
+        return this;
+    }
+    TypedQuery* crossJoin(std::string_view table) {
+        instance->getBuilder()->crossJoin(table);
+        return this;
+    }
+
+    // -----------------------------------------------------------
+    // RAW SQL / JSON envelope в typed chain-а. След `raw(...)`
+    // терминалите (`get`, `first`, `firstOrFail`) продължават да
+    // hidrate-ват резултатите в `T` през `Model::hydrate` — тоест
+    // работят непроменени.
+    // -----------------------------------------------------------
+    TypedQuery* raw(std::string_view sql, std::vector<JsonValue> params = {}) {
+        instance->getBuilder()->raw(sql, std::move(params));
+        return this;
+    }
+    TypedQuery* raw(std::string_view sql, std::initializer_list<JsonValue> params) {
+        instance->getBuilder()->raw(sql, params);
+        return this;
+    }
+    TypedQuery* raw(std::string_view sql, JsonValue namedParams) {
+        instance->getBuilder()->raw(sql, std::move(namedParams));
+        return this;
+    }
+    TypedQuery* rawJson(JsonValue envelope) {
+        instance->getBuilder()->rawJson(std::move(envelope));
+        return this;
+    }
+
     TypedQuery* limit(int n) {
         instance->limit(n);
         return this;
@@ -229,6 +297,27 @@ inline T Model::findAs(int id) {
 template <ModelType T>
 inline std::optional<T> Model::tryFindAs(int id) {
     return query<T>()->find(id);
+}
+
+// ------------------------------------------------------------
+// `Model::rawAs<T>(sql, params)` — суров SQL с typed hydration.
+// Изпълнява raw в контекста на T (правилен backend, таблица,
+// колони) и връща `std::vector<T>`. Използва същия hydration
+// pipeline като `TypedQuery<T>::get()`.
+// ------------------------------------------------------------
+template <ModelType T>
+inline std::vector<T> Model::rawAs(std::string_view sql,
+                                    std::vector<JsonValue> params) {
+    auto q = query<T>();
+    q->raw(sql, std::move(params));
+    return q->get();
+}
+
+template <ModelType T>
+inline std::vector<T> Model::rawAs(std::string_view sql, JsonValue namedParams) {
+    auto q = query<T>();
+    q->raw(sql, std::move(namedParams));
+    return q->get();
 }
 
 }   // namespace Garvan

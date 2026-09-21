@@ -164,7 +164,161 @@ manual (`Model::set("email", v)`) — генерирани getter/setter-и не
 
 Виж `GARVAN.md` и `orm/typed_query.h` за пълния API surface.
 
-### 7. Hygiene
+### 7. SQL JOINs (2026-09-21)
+
+Fluent, backend-portable JOIN API върху `Builder`, `Model` и
+`TypedQuery<T>`. Затваря `GARVAN.md` **Gap 4** на explicit surface;
+relation-driven compile (`hasOne` / `hasMany` / `belongsTo` / `with`)
+все още попълва `Builder::joinModel` без емисия — отделен follow-up.
+
+**API (одинаков на трите нива):**
+
+```cpp
+join     (table, left, op, right)  |  join     (table, left, right)   // op = "="
+innerJoin(table, left, op, right)                                       // alias на join
+leftJoin (table, left, op, right)  |  leftJoin (table, left, right)
+rightJoin(table, left, op, right)  |  rightJoin(table, left, right)
+crossJoin(table)                                                        // без ON
+```
+
+**Пример (typed chain):**
+
+```cpp
+auto rows = User::query<User>()
+    ->leftJoin("orders", "users.id", "orders.user_id")
+    ->where("users.active", "=", true)
+    ->get();
+```
+
+**Механика.**
+
+- Нов `Garvan::JoinClause { type, table, leftColumn, op, rightColumn }`
+  се пази отделно от съществуващия `joinModel` (relations).
+- `Grammar::compileJoins()` емитира ` INNER|LEFT|RIGHT|CROSS JOIN ...`
+  фрагменти. Извиква се от `compileSelect` на Postgres, MySQL, SQLite
+  и MonetDB grammars.
+- Нов `Grammar::wrapQualified(id)` разцепва `"table.column"` и quotes
+  двете страни независимо (`"users"."id"`). Приложен в SELECT колоните
+  и в `compileWheres` — тоест `where("users.active", "=", true)` и
+  `get({"users.id", "orders.total"})` работят без ръчна манипулация.
+- Operator в `ON` clause минава през същия allowlist като WHERE.
+- CROSS JOIN не емитира `ON` (колоните се игнорират).
+
+**Mongo.** `MongoGrammar::compileSelect` не емитва SQL; вместо това
+изхвърля `joins[]` масив в JSON envelope-а (`from` / `localField` /
+`foreignField` / `type` за всеки join) — `MongoConnection` е очаквано
+да го преведе към `$lookup` aggregation stages. `RIGHT JOIN` върху
+Mongo хвърля `runtime_error` (няма `$lookup` еквивалент); `INNER` и
+`LEFT` работят; `CROSS` се приема, но без match условие.
+
+**Отворен sub-gap.** Релациите (`hasOne`, `hasMany`, `belongsTo`,
+`belongsToMany`, `with`) продължават да push-ват в `Builder::joinModel`,
+който не е свързан към `compileSelect`. Consumer-и, разчитащи на
+eager loading, трябва да ползват експлицитен `leftJoin(...)`
+докато този path не бъде довършен.
+
+### 8. Raw SQL / JSON envelope (2026-09-21)
+
+Escape hatch за случаи, които не се вписват в query builder-а:
+сложни агрегати, CTEs, DDL, backend-specific извиквания. Пълен
+portable placeholder rewriter — potребителят пише **един и същ**
+SQL и работи и на Postgres (`$N`), и на SQLite/MySQL/MonetDB (`?`).
+
+**API — три нива.**
+
+```cpp
+// Static (Model)
+JsonValue Model::raw(std::string_view sql, std::vector<JsonValue> params = {});
+JsonValue Model::raw(std::string_view sql, JsonValue namedParams);   // {":name"}
+JsonValue Model::rawJson(JsonValue envelope);                         // Mongo
+template <ModelType T>
+std::vector<T> Model::rawAs(std::string_view sql, std::vector<JsonValue> params = {});
+template <ModelType T>
+std::vector<T> Model::rawAs(std::string_view sql, JsonValue namedParams);
+
+// Typed chain
+TypedQuery<T>* raw(sql, params)  |  raw(sql, namedParams)  |  rawJson(envelope)
+
+// Low-level Builder
+Builder* raw(sql, params)  |  raw(sql, namedParams)  |  rawJson(envelope)
+[[nodiscard]] json executeRaw();
+```
+
+Терминалите (`get / first / firstOrFail / find`) на `TypedQuery<T>`
+работят непроменени — те short-circuit-ват към `executeRaw()` когато
+има активен raw и продължават да hidrate-ват в `T` през `Model::hydrate`.
+
+**Placeholder модел.**
+
+- **Positional `?`** — консумира `params[i]` по ред на срещане.
+- **Named `:name`** — очаква `params` да е JSON object; rewriter-ът
+  преобразува към positional по реда на срещане.
+- **Не се смесват** — SQL с и `?`, и `:name` хвърля `runtime_error`.
+- Rewriter-ът извиква `Grammar::placeholder(i)` — Postgres замества
+  към `$1..$N`, останалите backend-и оставят `?`.
+
+**Skip zones** (rewriter-ът не пипа placeholder-и вътре в тях):
+`'...'` string литерали (с `''` escape), `--` line comments,
+`/* ... */` block comments, Postgres `::` cast operator.
+
+**Guards** (всички хвърлят `std::runtime_error`):
+
+- празен SQL,
+- broj `?` ≠ params.size(),
+- `:name` без съответен ключ в JSON object-а,
+- `?` в SQL, но `params` е JSON object (или обратно),
+- `raw(sql,...)` на Mongo backend → съобщение да се ползва `rawJson`,
+- `rawJson(envelope)` на SQL backend → съобщение да се ползва `raw`.
+
+Backend detection става през нов `Grammar::isSql()` — SQL backends
+връщат `true`, `MongoGrammar` overrides към `false`.
+
+**Auto-detection SELECT vs write.** `Builder::isReadStatement()`
+разпознава `SELECT / WITH / SHOW / EXPLAIN / PRAGMA / VALUES / TABLE
+/ DESCRIBE / DESC` (skip-ва leading whitespace / comments). Позволява
+единен `raw()` name — не са нужни отделни `rawSelect` / `rawExec`.
+
+**Log-ване.** `executeRaw()` печата `[Garvan::raw] <финален SQL>` на
+stderr за всяка raw заявка (без параметрите — те могат да съдържат
+sensitive данни). За `rawJson` — `[Garvan::rawJson] <envelope>`.
+
+**Примери.**
+
+```cpp
+// Positional
+json rows = Model::raw(
+    "SELECT * FROM users WHERE created_at > ? AND active = ?",
+    { since, true });
+
+// Named
+json rows = Model::raw(
+    "SELECT * FROM users WHERE email = :email AND plan = :plan",
+    json::Object{{"email", e}, {"plan", "premium"}});
+
+// Typed hydration
+std::vector<User> premium = Model::rawAs<User>(
+    "SELECT * FROM users WHERE plan = :plan",
+    json::Object{{"plan", "premium"}});
+
+// Non-SELECT (auto-detect)
+Model::raw("REFRESH MATERIALIZED VIEW leaderboard");
+
+// В typed chain
+auto rows = User::query<User>()
+    ->raw("SELECT id, email FROM users WHERE plan = ?", { "premium" })
+    ->get();
+
+// Mongo envelope
+json out = Model::rawJson(
+    json::Object{{"collection", "users"}, {"filter", ...}});
+```
+
+**Забележка.** Instance-level `Model::raw()` chain (връщащ `Model*`)
+**не се излага** — C++ не позволява overload между static и instance
+метод със същата сигнатура. Ползвайте `TypedQuery<T>::raw()` за
+chain композиция или директно `model.getBuilder()->raw(...)`.
+
+### 9. Hygiene
 
 - `[[nodiscard]]` върху всички query terminals и getters.
 - `std::string_view` overloads в `where`, `sanitizeOperator`,

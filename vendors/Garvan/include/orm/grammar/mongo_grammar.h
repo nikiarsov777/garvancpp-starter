@@ -12,6 +12,9 @@ public:
     MongoGrammar();
     ~MongoGrammar();
 
+    // NoSQL backend — `raw(sql,...)` не се поддържа; ползвайте `rawJson(envelope)`.
+    bool isSql() const override { return false; }
+
     std::string wrap(const std::string& value) const override {
         assertSafeMongoField(value);
         return value;

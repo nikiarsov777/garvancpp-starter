@@ -34,6 +34,10 @@ and deploy.
 - Typed ORM pipeline (`Model::query<T>()`, `TypedQuery<T>`) with automatic
   rehydration, instance-level `save()`/`remove()`, and safe bulk `update()`/
   `remove()` (see "Typed ORM pipeline" below).
+- Fluent SQL JOINs (`join` / `leftJoin` / `rightJoin` / `innerJoin` /
+  `crossJoin`) on all SQL backends; Mongo emits `$lookup` metadata.
+- Raw SQL escape hatch (`Model::raw` / `rawAs<T>` / `rawJson`) with
+  portable `?` placeholders and `:name` support.
 
 ### Project structure
 
@@ -354,8 +358,12 @@ calls `Model::hydrate(row)` — which populates `attributes` and sets
 Closed gaps from `vendors/Garvan/GARVAN.md`: **Gap 1** (Model IS NULL
 — typed surface), **Gap 2** (DELETE — instance + bulk), **Gap 6**
 (UPDATE with non-PK WHERE), **Gap 7** (rehydration into model
-instance). Still open: Gap 3 (aggregates), Gap 4 (JOIN emission),
-Gap 5 (last-insert-id), Gap 8 (MonetDB PS bind pipeline).
+instance), **Gap 4** (JOIN emission — explicit fluent surface,
+2026-09-21; see "SQL JOINs" below). Still open: Gap 3 (aggregates),
+Gap 5 (last-insert-id), Gap 8 (MonetDB PS bind pipeline), and the
+sub-gap of Gap 4 (relation-driven auto-JOIN via `hasOne` / `hasMany`
+/ `belongsTo` / `with` — still not compiled). Raw SQL escape hatch
+via `Model::raw` / `rawAs<T>` (2026-09-21; see "Raw SQL" below).
 
 ### C++23 ORM surface
 
@@ -436,6 +444,98 @@ extension. Throwing methods (`get`, `first`, `find*`) are kept for BC.
   header).
 
 See `vendors/Garvan/README.md` for the full vendor-side change log.
+
+### SQL JOINs
+
+Fluent, backend-portable JOIN API is available on `Builder`, `Model`
+and `TypedQuery<T>` (added 2026-09-21):
+
+```cpp
+// Typed chain — join + qualified WHERE + typed hydration
+auto rows = User::query<User>()
+    ->leftJoin("orders", "users.id", "orders.user_id")
+    ->where("users.active", "=", true)
+    ->get();
+
+// Method surface (all three levels share the same signatures)
+join     (table, left, op, right)  |  join     (table, left, right)  // op="="
+innerJoin(table, left, op, right)                                     // alias
+leftJoin (table, left, op, right)  |  leftJoin (table, left, right)
+rightJoin(table, left, op, right)  |  rightJoin(table, left, right)
+crossJoin(table)                                                      // no ON
+```
+
+Qualified identifiers like `"users.id"` in SELECT columns / WHERE
+conditions / join clauses are automatically split and quoted per the
+active backend grammar.
+
+**Backend matrix.**
+
+| Backend  | Behaviour                                                    |
+| -------- | ------------------------------------------------------------ |
+| Postgres | Native `INNER / LEFT / RIGHT / CROSS JOIN`                   |
+| MySQL    | Native (inside the JSON aggregation subquery)                |
+| SQLite   | Native (RIGHT JOIN needs SQLite ≥ 3.39)                      |
+| MonetDB  | Native                                                       |
+| Mongo    | `joins[]` metadata in the JSON envelope for `$lookup` stages |
+
+`RIGHT JOIN` on Mongo throws (`$lookup` has no exact equivalent);
+`INNER` and `LEFT` are supported; `CROSS` is accepted without match.
+
+Relation helpers (`hasOne` / `hasMany` / `belongsTo` / `with`) still
+populate `Builder::joinModel` without SQL emission — use an explicit
+`leftJoin(...)` while that sub-gap is being closed. See
+`vendors/Garvan/GARVAN.md` Gap 4 for the full status.
+
+### Raw SQL (`raw()` / `rawJson()`)
+
+Escape hatch for cases that don't fit the query builder: complex
+aggregates, CTEs, DDL, backend-specific calls. Ships a portable
+placeholder rewriter so the same SQL runs on Postgres (`$N`) and on
+SQLite / MySQL / MonetDB (`?`).
+
+```cpp
+// Positional ?
+json rows = Model::raw(
+    "SELECT * FROM users WHERE created_at > ? AND active = ?",
+    { since, true });
+
+// Named :name (params is a JSON object)
+json rows = Model::raw(
+    "SELECT * FROM users WHERE email = :email AND plan = :plan",
+    json::Object{{"email", e}, {"plan", "premium"}});
+
+// Typed hydration
+std::vector<User> premium = Model::rawAs<User>(
+    "SELECT * FROM users WHERE plan = ?", { "premium" });
+
+// Non-SELECT — auto-detected via first keyword
+Model::raw("REFRESH MATERIALIZED VIEW leaderboard");
+
+// In a typed chain
+auto rows = User::query<User>()
+    ->raw("SELECT id, email FROM users WHERE plan = ?", { "premium" })
+    ->get();
+
+// Mongo — JSON envelope path
+json out = Model::rawJson(
+    json::Object{{"collection", "users"}, {"filter", ...}});
+```
+
+**Guards** (all throw `std::runtime_error`): empty SQL, `?` count ≠
+params size, missing `:name` key, mixing `?` and `:name` in one SQL,
+`raw(sql, ...)` on Mongo, `rawJson(envelope)` on a SQL backend.
+
+**Logging.** Every raw execution prints
+`[Garvan::raw] <final SQL>` (or `[Garvan::rawJson] <envelope>`) to
+stderr — parameters are not logged.
+
+**Skip zones** (placeholders inside these are preserved verbatim):
+`'...'` string literals with `''` escape, `--` line comments,
+`/* ... */` block comments, Postgres `::` cast.
+
+See `vendors/Garvan/README.md` section "8. Raw SQL" for the full
+API and edge cases.
 
 ### Kalpasan CLI
 
@@ -701,6 +801,10 @@ GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
   автоматична рехидратация, instance-ниво `save()`/`remove()` и
   безопасни bulk `update()`/`remove()` (виж "Типизиран ORM pipeline"
   по-долу).
+- Fluent SQL JOINs (`join` / `leftJoin` / `rightJoin` / `innerJoin` /
+  `crossJoin`) на всички SQL backend-и; Mongo — `$lookup` метадата.
+- Raw SQL escape hatch (`Model::raw` / `rawAs<T>` / `rawJson`) с
+  portable `?` placeholder-и и `:name` support.
 
 ### Структура на проекта
 
@@ -948,9 +1052,13 @@ id) също хвърля.
 Затворени gap-ове от `vendors/Garvan/GARVAN.md`: **Gap 1** (Model
 IS NULL — typed surface), **Gap 2** (DELETE — instance + bulk),
 **Gap 6** (UPDATE с non-PK WHERE), **Gap 7** (rehydration в model
-instance). Остават отворени: Gap 3 (aggregates), Gap 4 (JOIN
-emission), Gap 5 (last-insert-id), Gap 8 (MonetDB PS bind
-pipeline).
+instance), **Gap 4** (JOIN emission — явен fluent surface,
+2026-09-21; виж „SQL JOINs" по-долу). Остават отворени: Gap 3
+(aggregates), Gap 5 (last-insert-id), Gap 8 (MonetDB PS bind
+pipeline) и sub-gap-ът на Gap 4 (relation-driven auto-JOIN през
+`hasOne` / `hasMany` / `belongsTo` / `with` — все още не се
+компилира). Raw SQL escape hatch през `Model::raw` / `rawAs<T>`
+(2026-09-21; виж „Raw SQL" по-долу).
 
 ### C++23 ORM повърхнина
 
@@ -1032,6 +1140,99 @@ Throwing методите (`get`, `first`, `find*`) се пазят за BC.
   header).
 
 Виж `vendors/Garvan/README.md` за пълния vendor changelog.
+
+### SQL JOINs
+
+Fluent, backend-portable JOIN API върху `Builder`, `Model` и
+`TypedQuery<T>` (добавен 2026-09-21):
+
+```cpp
+// Typed chain — join + qualified WHERE + typed hydration
+auto rows = User::query<User>()
+    ->leftJoin("orders", "users.id", "orders.user_id")
+    ->where("users.active", "=", true)
+    ->get();
+
+// API повърхнина (една и съща на трите нива)
+join     (table, left, op, right)  |  join     (table, left, right)  // op="="
+innerJoin(table, left, op, right)                                     // alias
+leftJoin (table, left, op, right)  |  leftJoin (table, left, right)
+rightJoin(table, left, op, right)  |  rightJoin(table, left, right)
+crossJoin(table)                                                      // без ON
+```
+
+Qualified имена като `"users.id"` в SELECT колоните / WHERE / join
+клаузите се разцепват и quote-ват автоматично според активната
+grammar.
+
+**Backend матрица.**
+
+| Backend  | Поведение                                                     |
+| -------- | ------------------------------------------------------------ |
+| Postgres | Native `INNER / LEFT / RIGHT / CROSS JOIN`                   |
+| MySQL    | Native (вътре в JSON aggregation subquery)                   |
+| SQLite   | Native (RIGHT JOIN изисква SQLite ≥ 3.39)                    |
+| MonetDB  | Native                                                       |
+| Mongo    | `joins[]` метадата в JSON envelope-а за `$lookup` stages     |
+
+`RIGHT JOIN` на Mongo хвърля (`$lookup` няма точен еквивалент);
+`INNER` и `LEFT` се поддържат; `CROSS` се приема без match.
+
+Relation helper-ите (`hasOne` / `hasMany` / `belongsTo` / `with`)
+продължават да push-ват в `Builder::joinModel` без SQL emission —
+ползвайте експлицитен `leftJoin(...)` докато този sub-gap не бъде
+затворен. Виж `vendors/Garvan/GARVAN.md` Gap 4 за пълен статус.
+
+### Raw SQL (`raw()` / `rawJson()`)
+
+Escape hatch за случаи, които не се вписват в query builder-а:
+сложни агрегати, CTE-та, DDL, backend-specific заявки. Идва с
+portable placeholder rewriter — един и същ SQL работи и на
+Postgres (`$N`), и на SQLite / MySQL / MonetDB (`?`).
+
+```cpp
+// Positional ?
+json rows = Model::raw(
+    "SELECT * FROM users WHERE created_at > ? AND active = ?",
+    { since, true });
+
+// Named :name (params е JSON object)
+json rows = Model::raw(
+    "SELECT * FROM users WHERE email = :email AND plan = :plan",
+    json::Object{{"email", e}, {"plan", "premium"}});
+
+// Typed hydration
+std::vector<User> premium = Model::rawAs<User>(
+    "SELECT * FROM users WHERE plan = ?", { "premium" });
+
+// Non-SELECT — auto-detect по първия keyword
+Model::raw("REFRESH MATERIALIZED VIEW leaderboard");
+
+// В typed chain
+auto rows = User::query<User>()
+    ->raw("SELECT id, email FROM users WHERE plan = ?", { "premium" })
+    ->get();
+
+// Mongo — JSON envelope path
+json out = Model::rawJson(
+    json::Object{{"collection", "users"}, {"filter", ...}});
+```
+
+**Guards** (всички хвърлят `std::runtime_error`): празен SQL, брой
+`?` ≠ размер на params, липсващ `:name` ключ, смесване на `?` и
+`:name` в един SQL, `raw(sql, ...)` на Mongo, `rawJson(envelope)`
+на SQL backend.
+
+**Логване.** Всяко raw изпълнение печата
+`[Garvan::raw] <финален SQL>` (или `[Garvan::rawJson] <envelope>`)
+на stderr — параметрите не се log-ват.
+
+**Skip zones** (placeholder-ите вътре в тях се пазят непроменени):
+`'...'` string литерали с `''` escape, `--` line comments,
+`/* ... */` block comments, Postgres `::` cast.
+
+Виж `vendors/Garvan/README.md` раздел „8. Raw SQL" за пълен API +
+edge cases.
 
 ### Kalpasan CLI
 

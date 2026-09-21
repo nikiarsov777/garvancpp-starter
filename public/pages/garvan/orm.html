@@ -135,6 +135,68 @@ json data = *result;
 <li>{{{t_page_garvan_orm_e068}}}</li>
 <li>{{{t_page_garvan_orm_e069}}}</li>
 </ul>
+<h2 id="sql-joins">{{{t_page_garvan_orm_e070}}}</h2>
+<p>{{{t_page_garvan_orm_e071}}}</p>
+<pre><code class="language-cpp">// Typed chain — join + qualified WHERE + typed hydration
+auto rows = User::query&lt;User&gt;()
+    -&gt;leftJoin("orders", "users.id", "orders.user_id")
+    -&gt;where("users.active", "=", true)
+    -&gt;get();
+
+// API surface (same on Builder / Model / TypedQuery&lt;T&gt;)
+join     (table, left, op, right) | join     (table, left, right)  // op="="
+innerJoin(table, left, op, right)                                  // alias
+leftJoin (table, left, op, right) | leftJoin (table, left, right)
+rightJoin(table, left, op, right) | rightJoin(table, left, right)
+crossJoin(table)                                                   // no ON
+</code></pre>
+<p>{{{t_page_garvan_orm_e072}}}</p>
+<table>
+<thead><tr><th>{{{t_page_garvan_orm_e073}}}</th><th>{{{t_page_garvan_orm_e074}}}</th></tr></thead>
+<tbody>
+<tr><td>Postgres</td><td>{{{t_page_garvan_orm_e075}}}</td></tr>
+<tr><td>MySQL</td><td>{{{t_page_garvan_orm_e076}}}</td></tr>
+<tr><td>SQLite</td><td>{{{t_page_garvan_orm_e077}}}</td></tr>
+<tr><td>MonetDB</td><td>{{{t_page_garvan_orm_e078}}}</td></tr>
+<tr><td>Mongo</td><td>{{{t_page_garvan_orm_e079}}}</td></tr>
+</tbody>
+</table>
+<p>{{{t_page_garvan_orm_e080}}}</p>
+<h2 id="raw-sql">{{{t_page_garvan_orm_e081}}}</h2>
+<p>{{{t_page_garvan_orm_e082}}}</p>
+<pre><code class="language-cpp">// Positional ?
+json rows = Model::raw(
+    "SELECT * FROM users WHERE created_at &gt; ? AND active = ?",
+    { since, true });
+
+// Named :name (params is a JSON object)
+json rows = Model::raw(
+    "SELECT * FROM users WHERE email = :email AND plan = :plan",
+    json::Object{{"email", e}, {"plan", "premium"}});
+
+// Typed hydration
+std::vector&lt;User&gt; premium = Model::rawAs&lt;User&gt;(
+    "SELECT * FROM users WHERE plan = ?", { "premium" });
+
+// Non-SELECT — auto-detected via first keyword
+Model::raw("REFRESH MATERIALIZED VIEW leaderboard");
+
+// In a typed chain
+auto rows = User::query&lt;User&gt;()
+    -&gt;raw("SELECT id, email FROM users WHERE plan = ?", { "premium" })
+    -&gt;get();
+
+// Mongo — JSON envelope path
+json out = Model::rawJson(
+    json::Object{{"collection", "users"}, {"filter", ...}});
+</code></pre>
+<p>{{{t_page_garvan_orm_e083}}}</p>
+<ul>
+<li>{{{t_page_garvan_orm_e084}}}</li>
+<li>{{{t_page_garvan_orm_e085}}}</li>
+<li>{{{t_page_garvan_orm_e086}}}</li>
+</ul>
+<p>{{{t_page_garvan_orm_e087}}}</p>
 <div class="page-nav">
 <a class="prev" href="/garvan/env"><span class="label">{{t_prev}}</span><span class="title">.env configuration</span></a>
 <a class="next" href="/garvan/models"><span class="label">{{t_next}}</span><span class="title">Models</span></a>
