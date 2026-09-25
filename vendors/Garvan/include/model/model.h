@@ -33,7 +33,7 @@ concept ModelType = std::derived_from<T, Model>
 class Model : public ORM::OModel
 {
 public:
-    explicit Model(std::string client = "PSQL");
+    explicit Model(std::string client = "");
     virtual ~Model(); // Виртуален за правилно изтриване на наследници
 
     void init();
@@ -151,8 +151,53 @@ public:
     Model* belongsToMany(ORM::OModel model, std::string table = "", std::string fKey = "", std::string lKey = "");
     Model* hasMany(ORM::OModel model);
 
-    Model* where(std::string field, std::string value);
     Model* where(std::string field, std::string op, std::string value);
+    Model* where(std::string field, std::string value);
+    // IS / IS NOT NULL — emits inline `<col> IS [NOT] NULL` (see
+    // Grammar::compileWheres). The operator MUST be "IS" or
+    // "IS NOT"; other operators with a NULL RHS have no defined
+    // SQL semantics and would throw at grammar time anyway.
+    Model* where(std::string field, std::string op, std::nullptr_t);
+    Model* orWhere(std::string field, std::string value);
+    Model* orWhere(std::string field, std::string op, std::string value);
+    Model* orWhere(std::string field, std::string op, std::nullptr_t);
+    // IN / NOT IN — each element bound as its own placeholder. See
+    // `Builder::whereIn` for rejection semantics on empty lists.
+    Model* whereIn(std::string field, std::vector<std::string> values);
+    Model* orWhereIn(std::string field, std::vector<std::string> values);
+    Model* whereNotIn(std::string field, std::vector<std::string> values);
+    Model* orWhereNotIn(std::string field, std::vector<std::string> values);
+    // ORDER BY <column> <direction> — proxies straight through to
+    // `Builder::orderBy`. Direction is asc|desc (case-insensitive);
+    // any other value throws at composition time.
+    Model* orderBy(std::string column, std::string direction = "asc");
+    // Raw ORDER BY expression — see Builder::orderByRaw for the safety
+    // contract (grammar-level allowlist).
+    Model* orderByRaw(std::string expr);
+
+    // --- Aliased JOINs (proxies to Builder::*JoinAs) --------------------
+    Model* joinAs(std::string table, std::string alias,
+                  std::string left, std::string op, std::string right);
+    Model* leftJoinAs(std::string table, std::string alias,
+                      std::string left, std::string op, std::string right);
+    Model* rightJoinAs(std::string table, std::string alias,
+                       std::string left, std::string op, std::string right);
+    Model* innerJoinAs(std::string table, std::string alias,
+                       std::string left, std::string op, std::string right);
+
+    // --- Structured projection ------------------------------------------
+    // See Builder::select / selectAs / selectRaw for semantics. Non-empty
+    // projection wins over public_columns / withPrivate.
+    Model* select(std::string col);
+    Model* selectAs(std::string col, std::string alias);
+    Model* selectRaw(std::string expr, std::string alias = "");
+    // Opt-in to a SELECT projection that includes columns kept out of
+    // `public_columns` (private/sensitive fields). Proxies straight
+    // through to `Builder::withPrivate`.
+    Model* withPrivate();
+    // COUNT(*) aggregate terminal — sums matches for the current
+    // WHERE / JOIN chain. See `Builder::count` for envelope parsing.
+    [[nodiscard]] int64_t count();
     Model* with(ORM::OModel model);
 
     // --- Fluent JOINs (delegating to Builder) ---
@@ -186,6 +231,10 @@ public:
 
     // --- Финални методи (ВЕЧЕ БЕЗ delete this) ---
     [[nodiscard]] json get();
+    // Overrides `public_columns` for this query only (Builder-level
+    // mutation on a scratchpad instance) — used when a JOIN needs
+    // to pull columns from a table other than the model's own.
+    [[nodiscard]] json get(std::vector<std::string> cols);
     [[nodiscard]] json find(int id);
     [[nodiscard]] json findOrFail(int id);
     [[nodiscard]] json first();

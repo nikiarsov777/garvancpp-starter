@@ -61,6 +61,64 @@ User::query&lt;User&gt;()-&gt;where("banned","=", true)
                    -&gt;remove();                                // hard delete
 </code></pre>
 <p>{{{t_page_garvan_models_e014}}}</p>
+
+<h2 id="query-proxies">Query proxies (2026-09-26)</h2>
+<p><code>Model</code> now proxies the full expanded query surface directly
+onto model instances; there is no need to drop into <code>getBuilder()</code>
+for the common cases. Every method below has an identical counterpart on
+<code>TypedQuery&lt;T&gt;</code> for chained composition.</p>
+<ul>
+  <li><code>where(field, op, nullptr_t)</code> and
+      <code>orWhere(field, op, nullptr_t)</code> — emit
+      <code>&lt;col&gt; IS [NOT] NULL</code> inline (no bind).</li>
+  <li><code>orWhere(...)</code> overloads mirror <code>where(...)</code>:
+      string / typed / <code>nullptr_t</code>.</li>
+  <li><code>whereIn</code> / <code>orWhereIn</code> /
+      <code>whereNotIn</code> / <code>orWhereNotIn</code> — each value
+      binds as its own placeholder; empty list throws.</li>
+  <li><code>orderBy(col, dir)</code> — <code>asc|desc</code> guard, column
+      through <code>sanitizeOrderBy</code> allowlist.</li>
+  <li><code>orderByRaw(expr)</code> — multi-column sorts and backend
+      extensions (<code>NULLS LAST</code> / <code>NULLS FIRST</code>).</li>
+  <li><code>select(col)</code> / <code>selectAs(col, alias)</code> /
+      <code>selectRaw(expr, alias="")</code> — structured projection;
+      non-empty projection beats <code>public_columns</code> and
+      <code>withPrivate()</code>.</li>
+  <li><code>withPrivate()</code> — opts into
+      <code>SELECT &lt;table&gt;.*</code>, including columns kept out of
+      <code>public_columns</code>.</li>
+  <li><code>count()</code> — <code>COUNT(*)</code> aggregate terminal;
+      returns <code>int64_t</code>.</li>
+  <li><code>joinAs</code> / <code>leftJoinAs</code> /
+      <code>rightJoinAs</code> / <code>innerJoinAs</code> —
+      <code>&lt;TYPE&gt; JOIN &lt;table&gt; AS &lt;alias&gt;</code>.</li>
+  <li><code>get(std::vector&lt;std::string&gt; cols)</code> — per-query
+      override of <code>public_columns</code>, useful when a JOIN needs
+      columns from a table other than the model's own.</li>
+</ul>
+<pre><code class="language-cpp">// Aliased self-JOIN + structured projection + COUNT
+int64_t decided = Games::query&lt;Games&gt;()
+    -&gt;leftJoinAs("users", "w", "w.id", "=", "games.white_id")
+    -&gt;leftJoinAs("users", "b", "b.id", "=", "games.black_id")
+    -&gt;where("games.result", "IS NOT", nullptr)
+    -&gt;count();
+
+// IS NULL, structured SELECT, ordering
+auto pending = Invoice::query&lt;Invoice&gt;()
+    -&gt;select("invoices.id")
+    -&gt;selectAs("customers.name", "customer_name")
+    -&gt;leftJoin("customers", "customers.id", "invoices.customer_id")
+    -&gt;where("invoices.paid_at", "IS", nullptr)
+    -&gt;orderBy("invoices.due_at", "asc")
+    -&gt;get();
+</code></pre>
+<p>Model default client. The <code>Model</code> constructor default
+changed from <code>"PSQL"</code> to <code>""</code>: an empty client now
+delegates to <code>DbFactory</code>, which resolves the backend from the
+<code>.env</code> file. Explicit <code>Model("PSQL")</code> still works.
+See <a href="/garvan/orm#query-surface-expansion">ORM &raquo; Query surface
+expansion</a> for the full reference.</p>
+
 <div class="page-nav">
 <a class="prev" href="/garvan/orm"><span class="label">{{t_prev}}</span><span class="title">ORM / Query Builder</span></a>
 <a class="next" href="/garvan/controllers"><span class="label">{{t_next}}</span><span class="title">Controllers</span></a>

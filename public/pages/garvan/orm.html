@@ -158,6 +158,7 @@ crossJoin(table)                                                   // no ON
 <tr><td>MySQL</td><td>{{{t_page_garvan_orm_e076}}}</td></tr>
 <tr><td>SQLite</td><td>{{{t_page_garvan_orm_e077}}}</td></tr>
 <tr><td>MonetDB</td><td>{{{t_page_garvan_orm_e078}}}</td></tr>
+<tr><td>SingleStore / MemSQL</td><td>Native (MySQL wire protocol; <code>SinglestoreGrammar : MySqlGrammar</code>)</td></tr>
 <tr><td>Mongo</td><td>{{{t_page_garvan_orm_e079}}}</td></tr>
 </tbody>
 </table>
@@ -197,6 +198,118 @@ json out = Model::rawJson(
 <li>{{{t_page_garvan_orm_e086}}}</li>
 </ul>
 <p>{{{t_page_garvan_orm_e087}}}</p>
+
+<h2 id="query-surface-expansion">Query surface expansion (2026-09-26)</h2>
+<p>The query builder gained a set of Laravel-parity operations. All are
+exposed uniformly on <code>Builder</code>, <code>Model</code> and
+<code>TypedQuery&lt;T&gt;</code>.</p>
+
+<h3>OR-connected WHERE</h3>
+<p><code>WhereClause</code> carries a new <code>connector</code> field
+(<code>"AND"</code> default / <code>"OR"</code>); the grammar renders the
+logical connector between adjacent clauses. Overloads mirror <code>where</code>:
+string / typed (<code>integral</code>, <code>floating_point</code>,
+<code>bool</code>) / <code>nullptr_t</code> for <code>IS NULL</code> in an
+OR context.</p>
+<pre><code class="language-cpp">User::query&lt;User&gt;()
+    -&gt;where("plan", "=", "premium")
+    -&gt;orWhere("trial_expires_at", "&gt;", now)
+    -&gt;get();
+</code></pre>
+
+<h3>WHERE IN / NOT IN</h3>
+<p>Each value binds as its own placeholder. An empty list throws
+<code>std::runtime_error</code> — SQL <code>IN ()</code> is a syntax error
+on every backend.</p>
+<pre><code class="language-cpp">User::query&lt;User&gt;()
+    -&gt;whereIn("id", {"1","2","3"})
+    -&gt;orWhereNotIn("status", {"banned","deleted"})
+    -&gt;get();
+</code></pre>
+
+<h3>ORDER BY</h3>
+<p><code>orderBy(col, dir="asc")</code> — direction limited to
+<code>asc|desc</code> (case-insensitive); column flows through the grammar's
+<code>sanitizeOrderBy</code> allowlist. <code>orderByRaw(expr)</code> for
+multi-column sorts and backend extensions (<code>NULLS LAST</code>).
+Overwrite semantics — not a stack.</p>
+<pre><code class="language-cpp">User::query&lt;User&gt;()-&gt;orderBy("created_at", "desc")-&gt;get();
+User::query&lt;User&gt;()-&gt;orderByRaw("last_seen DESC NULLS LAST")-&gt;get();
+</code></pre>
+
+<h3>Structured SELECT / <code>selectRaw</code> / <code>withPrivate</code></h3>
+<p>A new <code>SelectClause { kind: {Column, Aliased, Raw}, expr, alias }</code>
+gives three composition paths. When non-empty, <code>selects</code> beats
+<code>public_columns</code> and <code>withPrivate()</code> in
+<code>compileSelect</code> precedence.</p>
+<pre><code class="language-cpp">User::query&lt;User&gt;()
+    -&gt;select("users.id")
+    -&gt;selectAs("users.email", "user_email")
+    -&gt;selectRaw("COALESCE(NULLIF(t.name_bul,''), t.name_eng)", "display_name")
+    -&gt;leftJoin("tags t", "t.user_id", "users.id")
+    -&gt;get();
+</code></pre>
+<p><code>Column</code> / <code>Aliased</code> flow through identifier
+wrapping (safe by construction). <code>Raw</code> embeds SQL verbatim — the
+caller is responsible for guarding it against injection (allowlist, never
+user input). <code>withPrivate()</code> opts into
+<code>SELECT &lt;table&gt;.*</code>, including columns kept out of
+<code>public_columns</code> (password hashes, verification tokens).</p>
+
+<h3><code>count()</code> terminal</h3>
+<p>Aggregate <code>COUNT(*)</code> with exception-safe state restore
+(<code>countMode</code> / <code>limit</code>). The envelope parser handles
+list-of-object (Postgres <code>json_agg</code>, MySQL
+<code>JSON_ARRAYAGG</code>), bare object (SingleStore / SQLite / MonetDB)
+and numeric-as-string shapes.</p>
+<pre><code class="language-cpp">int64_t n = User::query&lt;User&gt;()
+              -&gt;where("active", "=", true)
+              -&gt;count();
+</code></pre>
+
+<h3>Aliased JOINs</h3>
+<p><code>joinAs</code>, <code>leftJoinAs</code>, <code>rightJoinAs</code>,
+<code>innerJoinAs</code> — emit
+<code>&lt;TYPE&gt; JOIN &lt;table&gt; AS &lt;alias&gt;</code>. The
+identifier-wrapper handles alias references
+(<code>"w.username"</code> → <code>"w"."username"</code>).</p>
+<pre><code class="language-cpp">Games::query&lt;Games&gt;()
+    -&gt;leftJoinAs("users", "w", "w.id", "=", "games.white_id")
+    -&gt;leftJoinAs("users", "b", "b.id", "=", "games.black_id")
+    -&gt;selectAs("w.username", "white_name")
+    -&gt;selectAs("b.username", "black_name")
+    -&gt;get();
+</code></pre>
+
+<h3>Auto-qualify under JOIN</h3>
+<p><code>Grammar::wrapModelColumn(id, modelTable)</code> prefixes bare
+column names (<code>"id"</code>) with the model's table when the query has
+JOINs. Without this, JOIN-ed queries with colliding column names fail on
+MySQL / SingleStore (<code>Duplicate column name</code>) and Postgres
+(ambiguous reference).</p>
+
+<h3><code>DbClient::lastInsertId()</code></h3>
+<p>Portable surrogate for <code>RETURNING id</code> /
+<code>LAST_INSERT_ID()</code> / <code>sqlite3_last_insert_rowid</code>.
+Associates a generated PK with the in-memory model instance without a
+SELECT round-trip after INSERT.</p>
+
+<h3>Model default client</h3>
+<p><code>Model::Model(std::string client = "")</code> — previously defaulted
+to <code>"PSQL"</code>. An empty string now delegates to
+<code>DbFactory</code>, which resolves the backend from the <code>.env</code>
+file (<code>MIGRATION_DB</code> / <code>&lt;PREFIX&gt;_DATABASE_TYPE</code>).
+Explicit <code>Model("PSQL")</code> still works — the change is opt-out only.</p>
+
+<h3>Debugging: <code>GARVAN_SQL_DEBUG</code></h3>
+<p>Set <code>GARVAN_SQL_DEBUG=1</code> in the environment to trace compiled
+SQL on stderr:</p>
+<pre><code>[Garvan::sql] SELECT "users"."id", "users"."email" FROM "users" WHERE ...  (params=2)
+</code></pre>
+<p>Cached once (<code>static const bool</code>) — no per-query
+<code>getenv()</code> cost. Mirrors the existing <code>[Garvan::raw]</code>
+line so log-grep patterns work uniformly across compiled and raw paths.</p>
+
 <div class="page-nav">
 <a class="prev" href="/garvan/env"><span class="label">{{t_prev}}</span><span class="title">.env configuration</span></a>
 <a class="next" href="/garvan/models"><span class="label">{{t_next}}</span><span class="title">Models</span></a>

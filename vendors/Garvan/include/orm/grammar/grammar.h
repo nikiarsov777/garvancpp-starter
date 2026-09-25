@@ -24,6 +24,15 @@ namespace Garvan {
         string column;
         string op;
         string value;
+        // Logical connector applied BEFORE this clause when it's not
+        // the first in the WHERE list. "AND" (default, backward-
+        // compatible) or "OR". Populated by Builder::where /
+        // Builder::orWhere; sanitized by Grammar::compileWheres.
+        string connector = "AND";
+        // For IN / NOT IN clauses — each element is bound as its own
+        // placeholder and `value` is ignored. Empty for scalar
+        // comparisons; populated by Builder::whereIn family.
+        vector<string> values;
     };
 
     // ---------------------------------------------------------------
@@ -39,9 +48,23 @@ namespace Garvan {
         enum class Type { Inner, Left, Right, Cross };
         Type        type = Type::Inner;
         std::string table;         // right-hand table name (unqualified)
+        std::string alias;         // optional table alias (empty = none)
         std::string leftColumn;    // qualified or unqualified: "t.c" or "c"
         std::string op = "=";      // comparison operator
         std::string rightColumn;   // qualified or unqualified
+    };
+
+    // ---------------------------------------------------------------
+    // SelectClause — typed projection element. `Column` and `Aliased`
+    // flow through the identifier-wrapping path (safe by construction).
+    // `Raw` embeds arbitrary SQL text verbatim — callers MUST guard
+    // the expression against injection (allowlist / no user input).
+    // ---------------------------------------------------------------
+    enum class SelectKind { Column, Aliased, Raw };
+    struct SelectClause {
+        SelectKind  kind = SelectKind::Column;
+        std::string expr;   // identifier for Column/Aliased; SQL for Raw
+        std::string alias;  // present for Aliased and Raw-with-alias
     };
 
     class Builder;
@@ -95,6 +118,23 @@ public:
         auto dot = id.find('.');
         if (dot == string::npos) return wrap(id);
         return wrap(id.substr(0, dot)) + "." + wrap(id.substr(dot + 1));
+    }
+
+    // ---------------------------------------------------------------
+    // Wrap a model-owned column reference. If `id` is already
+    // qualified ("table.col"), behaves exactly like wrapQualified.
+    // If it is bare ("col"), prefixes with the owning model's table
+    // so that the emitted SQL disambiguates against columns pulled
+    // in by a JOIN of the same name (e.g. `id` from both `games`
+    // and `users`). Without this, `compileSelect` emits an unqualified
+    // column list and JOIN-ed queries fail on same-named columns
+    // ("Duplicate column name 'id'" on MySQL/SingleStore, ambiguous
+    // reference on Postgres).
+    // ---------------------------------------------------------------
+    virtual string wrapModelColumn(const string& id, const string& modelTable) const
+    {
+        if (id.find('.') != string::npos) return wrapQualified(id);
+        return wrap(modelTable) + "." + wrap(id);
     }
 
     // Compile methods now return a PreparedStatement: an SQL string
@@ -201,8 +241,26 @@ protected:
         return std::string(order);
     }
 
+    // Sanitize the logical connector between WHERE clauses. Only
+    // "AND" and "OR" are permitted; anything else is a bug (or an
+    // injection attempt if the value ever became caller-controlled).
+    // Case-insensitive input, uppercased output.
+    [[nodiscard]] static string sanitizeConnector(std::string_view c)
+    {
+        std::string upper;
+        upper.reserve(c.size());
+        std::transform(c.begin(), c.end(), std::back_inserter(upper),
+                       [](unsigned char ch){ return std::toupper(ch); });
+        if (upper == "AND" || upper == "OR") return upper;
+        throw runtime_error("Grammar: rejected WHERE connector: '"
+                            + std::string(c) + "'");
+    }
+
     // Compile a WHERE clause using placeholders. Each value is appended
-    // to `params`; the operator passes through the allowlist.
+    // to `params`; the operator passes through the allowlist. The
+    // logical connector on the second and subsequent clauses is taken
+    // from `WhereClause::connector` (allowed: AND / OR) — the first
+    // clause never emits a connector.
     virtual string compileWheres(const vector<Garvan::WhereClause>& wheres,
                                  vector<json>& params) const
     {
@@ -215,14 +273,98 @@ protected:
             const auto& w = wheres[i];
             const string op = sanitizeOperator(w.op);
 
-            sql += wrapQualified(w.column) + " " + op + " " + placeholder(params.size());
-            params.push_back(json(w.value));
+            if (i != 0) {
+                sql += " " + sanitizeConnector(w.connector) + " ";
+            }
 
-            if (i != wheres.size() - 1)
-                sql += " AND ";
+            // IN / NOT IN: each element in `values` becomes its own
+            // placeholder — `col IN ($1, $2, ...)`. Populated by
+            // Builder::whereIn / orWhereIn / whereNotIn.
+            const bool isInOp = (op == "IN" || op == "NOT IN");
+            if (isInOp && !w.values.empty()) {
+                sql += wrapQualified(w.column) + " " + op + " (";
+                for (size_t k = 0; k < w.values.size(); ++k) {
+                    if (k) sql += ", ";
+                    sql += placeholder(params.size());
+                    params.push_back(json(w.values[k]));
+                }
+                sql += ")";
+                continue;
+            }
+
+            // IS / IS NOT NULL: SQL semantics don't permit binding
+            // NULL through a placeholder (`col IS $1` with $1='NULL'
+            // compares against the string 'NULL', not the SQL NULL
+            // literal). The Builder's nullptr_t overload marks such
+            // values with the sentinel string "NULL"; recognise it
+            // here and emit the literal inline, without a bind.
+            const bool isNullOp = (op == "IS" || op == "IS NOT");
+            const bool valueIsNull = (w.value == "NULL" || w.value == "null");
+            if (isNullOp && valueIsNull) {
+                sql += wrapQualified(w.column) + " " + op + " NULL";
+            } else {
+                sql += wrapQualified(w.column) + " " + op + " "
+                     + placeholder(params.size());
+                params.push_back(json(w.value));
+            }
         }
 
         return sql;
+    }
+
+    // ---------------------------------------------------------------
+    // Compile the SELECT projection list into `query`, respecting
+    // priority: `selects` (Column/Aliased/Raw) wins; otherwise
+    // withPrivate → "<table>.*"; otherwise the `columns` wrapped
+    // list; empty falls back to "<table>.*".
+    //
+    // Parameters are extracted from Builder by the caller (Builder
+    // is only forward-declared here — see grammar.h header order).
+    //
+    // Reused by every SQL grammar that emits a simple projection
+    // (Postgres inner subquery, SingleStore, SQLite, MonetDB).
+    // MySQL's JSON_OBJECT-based projection overrides compileSelect
+    // entirely and throws on non-empty selects — mapping to literal
+    // keys is not implemented.
+    // ---------------------------------------------------------------
+    virtual void compileProjection(
+                const vector<Garvan::SelectClause>& selects,
+                const vector<string>& columns,
+                bool withPrivate,
+                const string& table,
+                string& query) const
+    {
+        if (!selects.empty()) {
+            for (size_t i = 0; i < selects.size(); ++i) {
+                const auto& s = selects[i];
+                if (i) query += ", ";
+                switch (s.kind) {
+                    case Garvan::SelectKind::Column:
+                        query += wrapModelColumn(s.expr, table);
+                        break;
+                    case Garvan::SelectKind::Aliased:
+                        query += wrapModelColumn(s.expr, table)
+                              + " AS " + wrap(s.alias);
+                        break;
+                    case Garvan::SelectKind::Raw:
+                        // Verbatim SQL — caller is responsible for
+                        // guarding the expression against injection.
+                        query += s.expr;
+                        if (!s.alias.empty())
+                            query += " AS " + wrap(s.alias);
+                        break;
+                }
+            }
+            return;
+        }
+        if (withPrivate || columns.empty()) {
+            query += wrap(table) + ".*";
+            return;
+        }
+        for (size_t i = 0; i < columns.size(); ++i) {
+            query += wrapModelColumn(columns[i], table);
+            if (i != columns.size() - 1) query += ", ";
+        }
     }
 
     // ---------------------------------------------------------------
@@ -249,6 +391,9 @@ protected:
                 case Garvan::JoinClause::Type::Cross: sql += " CROSS JOIN "; break;
             }
             sql += wrap(j.table);
+            if (!j.alias.empty()) {
+                sql += " AS " + wrap(j.alias);
+            }
 
             if (j.type == Garvan::JoinClause::Type::Cross) continue;
 

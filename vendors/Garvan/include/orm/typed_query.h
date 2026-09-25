@@ -83,6 +83,116 @@ public:
         return this;
     }
 
+    // --- OR-connected WHERE overloads (parallel to where(...)) ---
+    // Emit `<...> OR <col> <op> <val>` on the second and later
+    // clauses; used to express Laravel-style `where(...).orWhere(...)`
+    // chains. The first orWhere in a chain is functionally identical
+    // to where — the leading connector is dropped by Grammar.
+
+    TypedQuery* orWhere(std::string field, std::string value) {
+        instance->getBuilder()->orWhere(std::move(field), std::move(value));
+        return this;
+    }
+
+    TypedQuery* orWhere(std::string field, std::string op, std::string value) {
+        instance->getBuilder()->orWhere(std::move(field), std::move(op),
+                                        std::move(value));
+        return this;
+    }
+
+    TypedQuery* orWhere(std::string_view field, std::string_view op, std::nullptr_t) {
+        instance->getBuilder()->orWhere(field, op, nullptr);
+        return this;
+    }
+
+    template <typename V>
+    TypedQuery* orWhere(std::string_view field, std::string_view op, V value) {
+        instance->getBuilder()->orWhere(field, op, value);
+        return this;
+    }
+
+    // Opt-in to SELECT `<table>.*` (including columns kept out of
+    // `public_columns`). Callers are responsible for guarding the
+    // returned envelope — private fields will be present.
+    TypedQuery* withPrivate() {
+        instance->getBuilder()->withPrivate();
+        return this;
+    }
+
+    // --- IN / NOT IN (typed proxies) ---
+    TypedQuery* whereIn(std::string_view field, std::vector<std::string> values) {
+        instance->getBuilder()->whereIn(field, std::move(values));
+        return this;
+    }
+    TypedQuery* orWhereIn(std::string_view field, std::vector<std::string> values) {
+        instance->getBuilder()->orWhereIn(field, std::move(values));
+        return this;
+    }
+    TypedQuery* whereNotIn(std::string_view field, std::vector<std::string> values) {
+        instance->getBuilder()->whereNotIn(field, std::move(values));
+        return this;
+    }
+    TypedQuery* orWhereNotIn(std::string_view field, std::vector<std::string> values) {
+        instance->getBuilder()->orWhereNotIn(field, std::move(values));
+        return this;
+    }
+
+    // ORDER BY <column> <direction>. asc|desc (case-insensitive).
+    TypedQuery* orderBy(std::string_view column, std::string_view direction = "asc") {
+        instance->getBuilder()->orderBy(column, direction);
+        return this;
+    }
+    // Raw ORDER BY — see Builder::orderByRaw for safety contract.
+    TypedQuery* orderByRaw(std::string_view expr) {
+        instance->getBuilder()->orderByRaw(expr);
+        return this;
+    }
+
+    // --- Aliased JOINs (typed proxies) ---
+    TypedQuery* joinAs(std::string_view table, std::string_view alias,
+                       std::string_view left, std::string_view op,
+                       std::string_view right) {
+        instance->getBuilder()->joinAs(table, alias, left, op, right);
+        return this;
+    }
+    TypedQuery* leftJoinAs(std::string_view table, std::string_view alias,
+                           std::string_view left, std::string_view op,
+                           std::string_view right) {
+        instance->getBuilder()->leftJoinAs(table, alias, left, op, right);
+        return this;
+    }
+    TypedQuery* rightJoinAs(std::string_view table, std::string_view alias,
+                            std::string_view left, std::string_view op,
+                            std::string_view right) {
+        instance->getBuilder()->rightJoinAs(table, alias, left, op, right);
+        return this;
+    }
+    TypedQuery* innerJoinAs(std::string_view table, std::string_view alias,
+                            std::string_view left, std::string_view op,
+                            std::string_view right) {
+        instance->getBuilder()->innerJoinAs(table, alias, left, op, right);
+        return this;
+    }
+
+    // --- Structured projection (typed proxies) ---
+    TypedQuery* select(std::string_view col) {
+        instance->getBuilder()->select(col);
+        return this;
+    }
+    TypedQuery* selectAs(std::string_view col, std::string_view alias) {
+        instance->getBuilder()->selectAs(col, alias);
+        return this;
+    }
+    TypedQuery* selectRaw(std::string_view expr, std::string_view alias = "") {
+        instance->getBuilder()->selectRaw(expr, alias);
+        return this;
+    }
+
+    // COUNT(*) aggregate terminal.
+    [[nodiscard]] int64_t count() {
+        return instance->getBuilder()->count();
+    }
+
     // -----------------------------------------------------------
     // JOINs — прокси към `Builder::join / leftJoin / rightJoin /
     // innerJoin / crossJoin`. Позволяват typed chain-а да

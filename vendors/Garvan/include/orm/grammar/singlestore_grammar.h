@@ -7,16 +7,19 @@
 
 // ---------------------------------------------------------------
 // SingleStore/MemSQL grammar. SingleStore е MySQL wire-protocol
-// compatible: backticks за identifiers, `?` positional placeholders,
-// JSON_ARRAYAGG / JSON_OBJECT (7.5+). В първата ревизия няма
-// override-и — всичко се inherit-ва от MySqlGrammar. Класът съществува
-// като anchor point за бъдещи divergence-и (SHARD KEY hints,
-// distributed-only DDL, TIMEOUT_MS suffix и т.н.).
+// compatible (backticks, `?` placeholders), но JSON-construction
+// каталогът е различен: няма `JSON_OBJECT` / `JSON_ARRAYAGG`
+// (MySQL 5.7/8.0 built-ins), а ползва `JSON_BUILD_OBJECT(k,v,...)`
+// и `JSON_AGG(expr)`. Затова `compileSelect` е override-нат —
+// всичко останало (WHERE / JOIN / LIMIT / identifier wrap) идва
+// от MySqlGrammar.
 // ---------------------------------------------------------------
 class SinglestoreGrammar : public MySqlGrammar {
 public:
     SinglestoreGrammar();
     ~SinglestoreGrammar();
+
+    PreparedStatement compileSelect(const Garvan::Builder& builder) const override;
 };
 
 #endif

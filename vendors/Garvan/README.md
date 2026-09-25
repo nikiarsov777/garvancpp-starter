@@ -195,8 +195,9 @@ auto rows = User::query<User>()
 - Нов `Garvan::JoinClause { type, table, leftColumn, op, rightColumn }`
   се пази отделно от съществуващия `joinModel` (relations).
 - `Grammar::compileJoins()` емитира ` INNER|LEFT|RIGHT|CROSS JOIN ...`
-  фрагменти. Извиква се от `compileSelect` на Postgres, MySQL, SQLite
-  и MonetDB grammars.
+  фрагменти. Извиква се от `compileSelect` на Postgres, MySQL, SQLite,
+  MonetDB и SingleStore grammars (SingleStore = MySQL wire protocol,
+  затова наследява placeholder-и и quoting-а).
 - Нов `Grammar::wrapQualified(id)` разцепва `"table.column"` и quotes
   двете страни независимо (`"users"."id"`). Приложен в SELECT колоните
   и в `compileWheres` — тоест `where("users.active", "=", true)` и
@@ -222,7 +223,8 @@ eager loading, трябва да ползват експлицитен `leftJoin
 Escape hatch за случаи, които не се вписват в query builder-а:
 сложни агрегати, CTEs, DDL, backend-specific извиквания. Пълен
 portable placeholder rewriter — potребителят пише **един и същ**
-SQL и работи и на Postgres (`$N`), и на SQLite/MySQL/MonetDB (`?`).
+SQL и работи и на Postgres (`$N`), и на SQLite/MySQL/MonetDB/SingleStore
+(`?`).
 
 **API — три нива.**
 
@@ -379,6 +381,105 @@ aggregation). Ако в бъдеще се появи публичен native dri
   heap allocation за static set.
 - Include guards преименувани към `GARVAN_*`.
 - `#include <pqxx/pqxx>` премахнат от `orm/omodel.h` (ORM-neutral header).
+- **`GARVAN_SQL_DEBUG=1`** (env flag) — stderr trace на компилирания SQL за
+  non-raw пътищата: `[Garvan::sql] <SQL>  (params=N)`. Огледален на
+  `[Garvan::raw]`; cache-ва се еднократно, без per-query `getenv()` cost.
+
+### 11. Query surface expansion (2026-09-26)
+
+Query builder-ът получава набор от Laravel-parity операции: OR
+WHERE, IN / NOT IN, ORDER BY, structured SELECT, COUNT(*) и aliased
+JOINs. Всички са налични на `Builder`, `Model` и `TypedQuery<T>` с
+идентична сигнатура.
+
+**11.1 OR WHERE.** `WhereClause` получава `connector` поле
+(`"AND"` default / `"OR"`); `compileWheres` рендва свързвателя между
+съседни клаузи. `sanitizeConnector` — allow-list `{AND, OR}`.
+
+```cpp
+User::query<User>()
+    ->where("plan", "=", "premium")
+    ->orWhere("trial_expires_at", ">", now)
+    ->get();
+```
+
+`orWhere` overloads-ите огледалят `where`: string / typed
+(`integral`, `floating_point`, `bool`) / `nullptr_t`.
+
+**11.2 WHERE IN / NOT IN.**
+
+```cpp
+User::query<User>()
+    ->whereIn("id", {"1","2","3"})
+    ->orWhereNotIn("status", {"banned","deleted"})
+    ->get();
+```
+
+Всяка стойност — собствен placeholder. Празен list → `runtime_error`.
+
+**11.3 Model IS NULL.** `Model::where(field, op, nullptr)` и
+`Model::orWhere(...)` — `<col> IS [NOT] NULL` inline (no bind).
+
+**11.4 ORDER BY.** `orderBy(col, dir="asc")` (asc|desc,
+case-insensitive; column минава през `sanitizeOrderBy`), plus
+`orderByRaw(expr)` за multi-column и backend extensions
+(`NULLS LAST`). Overwrite semantics (не stack).
+
+**11.5 Structured SELECT / selectRaw / withPrivate.** Нов
+`SelectClause { kind, expr, alias }` с 3 варианта: `Column`
+(wrapped identifier), `Aliased` (wrapped + AS), `Raw` (verbatim
+SQL — caller-guarded).
+
+```cpp
+User::query<User>()
+    ->select("users.id")
+    ->selectAs("users.email", "user_email")
+    ->selectRaw("COALESCE(NULLIF(t.name_bul,''),t.name_eng)", "display_name")
+    ->get();
+```
+
+Precedence: `selects` (non-empty) > `withPrivate()` > `public_columns`.
+`withPrivate()`: SELECT `<table>.*` — включва private колони
+(password hashes и т.н.).
+
+**11.6 COUNT(\*).**
+
+```cpp
+int64_t n = User::query<User>()->where("active","=",true)->count();
+```
+
+Exception-safe state restore на `countMode` / `limit`.
+`parseCountEnvelope` handles list-of-object, bare object и
+numeric-as-string envelope shapes.
+
+**11.7 Aliased JOINs.**
+
+```cpp
+Games::query<Games>()
+    ->leftJoinAs("users", "w", "w.id", "=", "games.white_id")
+    ->leftJoinAs("users", "b", "b.id", "=", "games.black_id")
+    ->selectAs("w.username", "white_name")
+    ->get();
+```
+
+`JoinClause::alias` — рендва ` <TYPE> JOIN <table> AS <alias>`.
+`wrapQualified` работи над alias references.
+
+**11.8 `wrapModelColumn(id, modelTable)`.** Auto-qualify на bare
+model-owned колони под JOIN — `"id"` → `"<modelTable>"."id"`. Fix за
+`Duplicate column name` (MySQL/SingleStore) и ambiguous reference
+(Postgres) при JOIN-нати таблици с колидиращи имена.
+
+**11.9 `DbClient::lastInsertId()`.** Portable surrogate за
+`RETURNING id` / `LAST_INSERT_ID()` / `sqlite3_last_insert_rowid`.
+
+**11.10 Model default client.** `Model(std::string client = "")` —
+по-рано `"PSQL"`. Празен string → `DbFactory` resolve-ва от `.env`.
+Explicit `Model("PSQL")` продължава да работи.
+
+**BC.** Всички добавки са additive. Единствена behavioural промяна:
+Model default-ът (`""` вместо `"PSQL"`) — consumer-и с empty `.env`,
+разчитащи на Postgres implicit, трябва да минат explicit.
 
 ## Queue & Events subsystem
 

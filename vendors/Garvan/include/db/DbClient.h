@@ -26,6 +26,7 @@ namespace Garvan
         ~DbClient();
         json execute(string query);
         json execute(const PreparedStatement& stmt);
+        int64_t lastInsertId();
         DbFactory * dbFactory;
 
         Grammar* getGrammar();

@@ -18,6 +18,7 @@ public:
     json execute(string query) override;
     json execute(const PreparedStatement& stmt) override;
     void disconnect() override;
+    int64_t lastInsertId() override;
 
     pqxx::connection *con;
 

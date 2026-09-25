@@ -22,7 +22,7 @@ and deploy.
 
 - HTTP and WebSocket server built on Crow's compile-time routing core.
 - Fluent ORM / query builder with per-backend grammar (Postgres, MySQL, SQLite,
-  MongoDB, MonetDB).
+  MongoDB, MonetDB, SingleStore / MemSQL).
 - Migrations and seeders driven by the standalone `garvan-migrate` tool.
 - Mustache templating with a multi-language built-in documentation site
   (en, bg, es, pt, ru, tr).
@@ -38,6 +38,14 @@ and deploy.
   `crossJoin`) on all SQL backends; Mongo emits `$lookup` metadata.
 - Raw SQL escape hatch (`Model::raw` / `rawAs<T>` / `rawJson`) with
   portable `?` placeholders and `:name` support.
+- Query surface (2026-09-26): `orWhere`, `whereIn` / `whereNotIn`,
+  `orderBy` / `orderByRaw`, structured `select` / `selectAs` /
+  `selectRaw`, `withPrivate`, `count()` and aliased JOINs
+  (`joinAs` / `leftJoinAs` / `rightJoinAs`) — see "Query surface
+  expansion" below.
+- Opt-in compiled-SQL trace via `GARVAN_SQL_DEBUG=1` (env flag):
+  emits `[Garvan::sql] <SQL>  (params=N)` on stderr, mirroring the
+  existing `[Garvan::raw]` line for the raw path.
 
 ### Project structure
 
@@ -477,6 +485,7 @@ active backend grammar.
 | MySQL    | Native (inside the JSON aggregation subquery)                |
 | SQLite   | Native (RIGHT JOIN needs SQLite ≥ 3.39)                      |
 | MonetDB  | Native                                                       |
+| SingleStore | Native (MySQL wire; `SinglestoreGrammar : MySqlGrammar`)  |
 | Mongo    | `joins[]` metadata in the JSON envelope for `$lookup` stages |
 
 `RIGHT JOIN` on Mongo throws (`$lookup` has no exact equivalent);
@@ -492,7 +501,8 @@ populate `Builder::joinModel` without SQL emission — use an explicit
 Escape hatch for cases that don't fit the query builder: complex
 aggregates, CTEs, DDL, backend-specific calls. Ships a portable
 placeholder rewriter so the same SQL runs on Postgres (`$N`) and on
-SQLite / MySQL / MonetDB (`?`).
+SQLite / MySQL / MonetDB / SingleStore (`?` — SingleStore reuses the
+MySQL wire protocol).
 
 ```cpp
 // Positional ?
@@ -536,6 +546,119 @@ stderr — parameters are not logged.
 
 See `vendors/Garvan/README.md` section "8. Raw SQL" for the full
 API and edge cases.
+
+### Query surface expansion (2026-09-26)
+
+The query builder gained a set of Laravel-parity operations, all
+exposed uniformly on `Builder`, `Model` and `TypedQuery<T>`.
+
+**OR-connected WHERE.** `WhereClause` carries a new `connector`
+field (`"AND"` default / `"OR"`); the grammar renders the logical
+connector between adjacent clauses. Overloads mirror `where`:
+string / typed (`integral`, `floating_point`, `bool`) / `nullptr_t`
+for `IS NULL` in an OR context.
+
+```cpp
+User::query<User>()
+    ->where("plan", "=", "premium")
+    ->orWhere("trial_expires_at", ">", now)
+    ->get();
+```
+
+**WHERE IN / NOT IN.** Each value binds as its own placeholder;
+empty list throws (SQL `IN ()` is a syntax error on every backend).
+
+```cpp
+User::query<User>()
+    ->whereIn("id", {"1","2","3"})
+    ->orWhereNotIn("status", {"banned","deleted"})
+    ->get();
+```
+
+**ORDER BY.** `orderBy(col, dir="asc")` — direction limited to
+`asc|desc` (case-insensitive); column flows through the grammar's
+`sanitizeOrderBy` allowlist. `orderByRaw(expr)` for multi-column
+sorts and backend extensions (`NULLS LAST`). Overwrite semantics —
+not a stack.
+
+```cpp
+User::query<User>()->orderBy("created_at", "desc")->get();
+User::query<User>()->orderByRaw("last_seen DESC NULLS LAST")->get();
+```
+
+**Structured SELECT + `selectRaw` + `withPrivate`.** A new
+`SelectClause { kind: {Column, Aliased, Raw}, expr, alias }` gives
+three composition paths. Non-empty `selects` beats `public_columns`
+and `withPrivate()` in `compileSelect` precedence.
+
+```cpp
+User::query<User>()
+    ->select("users.id")
+    ->selectAs("users.email", "user_email")
+    ->selectRaw("COALESCE(NULLIF(t.name_bul,''), t.name_eng)", "display_name")
+    ->leftJoin("tags t", "t.user_id", "users.id")
+    ->get();
+```
+
+`Column` / `Aliased` flow through identifier wrapping (safe by
+construction). `Raw` embeds SQL verbatim — the caller is responsible
+for guarding it against injection (allowlist, never user input).
+`withPrivate()` opts into `SELECT <table>.*`, including columns
+kept out of `public_columns` (password hashes, verification tokens).
+
+**`count()` terminal.** Aggregate `COUNT(*)` with exception-safe
+state restore. Envelope parser handles list-of-object (Postgres
+`json_agg`, MySQL `JSON_ARRAYAGG`), bare object (SingleStore /
+SQLite / MonetDB) and numeric-as-string shapes.
+
+```cpp
+int64_t n = User::query<User>()->where("active","=", true)->count();
+```
+
+**Aliased JOINs.** `joinAs`, `leftJoinAs`, `rightJoinAs`,
+`innerJoinAs` — emit ` <TYPE> JOIN <table> AS <alias>`; the
+identifier-wrapper handles alias references (`"w.username"` →
+`"w"."username"`).
+
+```cpp
+Games::query<Games>()
+    ->leftJoinAs("users", "w", "w.id", "=", "games.white_id")
+    ->leftJoinAs("users", "b", "b.id", "=", "games.black_id")
+    ->selectAs("w.username", "white_name")
+    ->selectAs("b.username", "black_name")
+    ->get();
+```
+
+**Auto-qualify under JOIN.** `Grammar::wrapModelColumn(id, table)`
+prefixes bare column names (`"id"`) with the model's table when
+the query has JOINs. Without this, JOIN-ed queries with colliding
+column names fail on MySQL/SingleStore (`Duplicate column name`)
+and Postgres (ambiguous reference).
+
+**`DbClient::lastInsertId()`.** Portable surrogate for
+`RETURNING id` / `LAST_INSERT_ID()` / `sqlite3_last_insert_rowid`.
+Associates a generated PK with the in-memory model instance without
+a SELECT round-trip after INSERT.
+
+**Model default client.** `Model::Model(std::string client = "")` —
+previously defaulted to `"PSQL"`. An empty string now delegates to
+`DbFactory`, which resolves the backend from `.env`
+(`MIGRATION_DB` / `<PREFIX>_DATABASE_TYPE`). Explicit
+`Model("PSQL")` still works — the change is opt-out only.
+
+**Debugging.** Set `GARVAN_SQL_DEBUG=1` in the environment to trace
+compiled SQL on stderr:
+
+```
+[Garvan::sql] SELECT "users"."id", "users"."email" FROM "users" WHERE ...  (params=2)
+```
+
+Cached once (`static const bool`) — no per-query `getenv()` cost.
+Mirrors the existing `[Garvan::raw]` line so log-grep patterns work
+uniformly across compiled and raw paths.
+
+See `vendors/Garvan/README.md` section "11. Query surface expansion"
+for the full BG-language reference and edge cases.
 
 ### Kalpasan CLI
 
@@ -788,7 +911,7 @@ GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
 
 - HTTP и WebSocket сървър върху compile-time routing-а на Crow.
 - ORM / query builder с граматика за всеки backend (Postgres, MySQL, SQLite,
-  MongoDB, MonetDB).
+  MongoDB, MonetDB, SingleStore / MemSQL).
 - Миграции и сийдъри през самостоятелния `garvan-migrate`.
 - Mustache шаблони и вградена многоезична документация (en, bg, es, pt, ru, tr).
 - Скафолдинг през `kalpasan`: модели, контролери, услуги, миграции.
@@ -805,6 +928,14 @@ GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
   `crossJoin`) на всички SQL backend-и; Mongo — `$lookup` метадата.
 - Raw SQL escape hatch (`Model::raw` / `rawAs<T>` / `rawJson`) с
   portable `?` placeholder-и и `:name` support.
+- Query surface (2026-09-26): `orWhere`, `whereIn` / `whereNotIn`,
+  `orderBy` / `orderByRaw`, structured `select` / `selectAs` /
+  `selectRaw`, `withPrivate`, `count()` и aliased JOINs
+  (`joinAs` / `leftJoinAs` / `rightJoinAs`) — виж "Разширение на
+  query surface" по-долу.
+- Opt-in trace на компилирания SQL през `GARVAN_SQL_DEBUG=1` (env
+  flag): `[Garvan::sql] <SQL>  (params=N)` на stderr, огледален на
+  `[Garvan::raw]` line-а.
 
 ### Структура на проекта
 
@@ -1173,6 +1304,7 @@ grammar.
 | MySQL    | Native (вътре в JSON aggregation subquery)                   |
 | SQLite   | Native (RIGHT JOIN изисква SQLite ≥ 3.39)                    |
 | MonetDB  | Native                                                       |
+| SingleStore | Native (MySQL wire; `SinglestoreGrammar : MySqlGrammar`)  |
 | Mongo    | `joins[]` метадата в JSON envelope-а за `$lookup` stages     |
 
 `RIGHT JOIN` на Mongo хвърля (`$lookup` няма точен еквивалент);
@@ -1188,7 +1320,8 @@ Relation helper-ите (`hasOne` / `hasMany` / `belongsTo` / `with`)
 Escape hatch за случаи, които не се вписват в query builder-а:
 сложни агрегати, CTE-та, DDL, backend-specific заявки. Идва с
 portable placeholder rewriter — един и същ SQL работи и на
-Postgres (`$N`), и на SQLite / MySQL / MonetDB (`?`).
+Postgres (`$N`), и на SQLite / MySQL / MonetDB / SingleStore (`?` —
+SingleStore минава през MySQL wire protocol-а).
 
 ```cpp
 // Positional ?
@@ -1233,6 +1366,105 @@ json out = Model::rawJson(
 
 Виж `vendors/Garvan/README.md` раздел „8. Raw SQL" за пълен API +
 edge cases.
+
+### Разширение на query surface (2026-09-26)
+
+Query builder-ът получи набор от Laravel-parity операции. Всички са
+изложени еднообразно на `Builder`, `Model` и `TypedQuery<T>`.
+
+**OR WHERE.** `WhereClause::connector` (`"AND"` default / `"OR"`);
+grammar-ът рендва свързвателя между съседни клаузи. Overloads
+огледалят `where`: string / typed / `nullptr_t` (за `IS NULL` в
+OR context).
+
+```cpp
+User::query<User>()
+    ->where("plan", "=", "premium")
+    ->orWhere("trial_expires_at", ">", now)
+    ->get();
+```
+
+**WHERE IN / NOT IN.** Всяка стойност — собствен placeholder;
+празен list хвърля.
+
+```cpp
+User::query<User>()
+    ->whereIn("id", {"1","2","3"})
+    ->orWhereNotIn("status", {"banned","deleted"})
+    ->get();
+```
+
+**ORDER BY.** `orderBy(col, dir="asc")` — direction asc|desc
+(case-insensitive; column през `sanitizeOrderBy`).
+`orderByRaw(expr)` за multi-column или backend extensions
+(`NULLS LAST`). Overwrite semantics.
+
+```cpp
+User::query<User>()->orderBy("created_at", "desc")->get();
+```
+
+**Structured SELECT + `selectRaw` + `withPrivate`.** Нов
+`SelectClause { kind: {Column, Aliased, Raw}, expr, alias }`.
+Non-empty `selects` побеждава `public_columns` и `withPrivate()`
+в precedence-а на `compileSelect`.
+
+```cpp
+User::query<User>()
+    ->select("users.id")
+    ->selectAs("users.email", "user_email")
+    ->selectRaw("COALESCE(NULLIF(t.name_bul,''), t.name_eng)", "display_name")
+    ->get();
+```
+
+`Column` / `Aliased` минават през identifier wrapping (safe by
+construction). `Raw` embed-ва SQL verbatim — caller-guarded.
+`withPrivate()` — opt-in към `<table>.*` (включва private колони).
+
+**`count()`.** COUNT(*) aggregate с exception-safe state restore.
+Envelope parser покрива list-of-object, bare object и
+numeric-as-string shapes.
+
+```cpp
+int64_t n = User::query<User>()->where("active","=", true)->count();
+```
+
+**Aliased JOINs.**
+
+```cpp
+Games::query<Games>()
+    ->leftJoinAs("users", "w", "w.id", "=", "games.white_id")
+    ->leftJoinAs("users", "b", "b.id", "=", "games.black_id")
+    ->selectAs("w.username", "white_name")
+    ->get();
+```
+
+`JoinClause::alias` — ` <TYPE> JOIN <table> AS <alias>`;
+`wrapQualified` работи над alias references (`"w.username"` →
+`"w"."username"`).
+
+**Auto-qualify под JOIN.** `Grammar::wrapModelColumn(id, table)`
+prefix-ва bare колони с model table-а — fix за
+`Duplicate column name` (MySQL/SingleStore) и ambiguous reference
+(Postgres) при JOIN-нати таблици с колидиращи имена.
+
+**`DbClient::lastInsertId()`.** Portable surrogate за
+`RETURNING id` / `LAST_INSERT_ID()` / `sqlite3_last_insert_rowid`.
+
+**Model default client.** `Model(std::string client = "")` — по-рано
+`"PSQL"`. Празен string сега → `DbFactory` resolve-ва от `.env`.
+Explicit `Model("PSQL")` продължава.
+
+**Debugging.** `GARVAN_SQL_DEBUG=1` в environment-а включва
+stderr trace:
+
+```
+[Garvan::sql] SELECT "users"."id", "users"."email" FROM "users" WHERE ...  (params=2)
+```
+
+Cache-ва се еднократно; огледален на `[Garvan::raw]`.
+
+Виж `vendors/Garvan/README.md` раздел „11. Query surface expansion"
+за пълния BG reference.
 
 ### Kalpasan CLI
 

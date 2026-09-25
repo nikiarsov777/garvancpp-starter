@@ -25,10 +25,51 @@ public:
 
     virtual void disconnect() = 0;
 
+    // ---------------------------------------------------------------
+    // Return the id of the last row inserted in the current session.
+    // Backends implement via native functions:
+    //   Postgres:    LASTVAL()
+    //   MySQL/SingleStore: LAST_INSERT_ID()
+    //   SQLite:      last_insert_rowid()
+    // Default 0 for backends that don't expose this concept (Mongo,
+    // MonetDB). Session-scoped: safe for per-request Model instances
+    // because each Model instantiates its own DbClient / DbConnection.
+    // ---------------------------------------------------------------
+    virtual int64_t lastInsertId() { return 0; }
+
     // Новите методи за Mongo поддръжка в GarvanCpp
     // virtual json executeMongo(string collection, string filterJson, int limit) = 0;
 
 protected:
+    // Parse a "[{\"id\":<value>}]" one-row payload into int64. Returns 0
+    // on any parse failure. Used by concrete connections implementing
+    // lastInsertId() via a follow-up SELECT.
+    static int64_t parseIdFromResult(const std::string& s)
+    {
+        if (s.empty() || s == "NULL") return 0;
+        try {
+            JsonValue j = JsonValue::parse(s);
+            if (j.isArray() && j.size() > 0) {
+                const auto& row = j.asArray()[0];
+                if (row.isObject() && row.contains("id")) {
+                    const auto& idv = row["id"];
+                    if (idv.isInt())    return static_cast<int64_t>(idv.asInt());
+                    if (idv.isString()) {
+                        try { return std::stoll(idv.asString()); }
+                        catch (...) { return 0; }
+                    }
+                }
+            }
+            // Single-cell shortcut some backends might use.
+            if (j.isInt())    return static_cast<int64_t>(j.asInt());
+            if (j.isString()) {
+                try { return std::stoll(j.asString()); }
+                catch (...) { return 0; }
+            }
+        } catch (...) {}
+        return 0;
+    }
+
     // Escape an arbitrary C string for safe inclusion as the contents
     // of a JSON string literal. Used by connections that interpolate
     // driver-supplied error messages into JSON. Without this, an error

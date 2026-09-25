@@ -4,6 +4,7 @@
 #include <cctype>
 #include <concepts>
 #include <cstdio>
+#include <cstdlib>
 #include <exception>
 #include <expected>
 #include <initializer_list>
@@ -67,6 +68,29 @@ private:
     vector<string> public_columns;
     vector<string> private_columns;
 
+    // When true, `compileSelect` emits `<table>.*` instead of the
+    // filtered `public_columns` list — used by callers that need
+    // access to columns intentionally kept out of the public
+    // projection (e.g. `password_hash`, `email_verified_at` on
+    // `users`). Opt-in via `Builder::withPrivate()`.
+    bool includePrivateCols = false;
+
+    // When true, `compileSelect` emits an aggregate `COUNT(*)`
+    // projection instead of the column list. Terminated by
+    // `Builder::count()` (which flips the flag, runs the query,
+    // and restores state). Not exposed directly — callers use
+    // `count()` on Builder / Model / TypedQuery.
+    bool countMode = false;
+
+    // Structured projection list — populated by `select()` /
+    // `selectAs()` / `selectRaw()`. When non-empty, takes precedence
+    // over `public_columns` / `withPrivate()` in the grammar's
+    // `compileSelect`. Each element is either a wrapped identifier
+    // (Column / Aliased) or a raw SQL expression (Raw). Callers of
+    // `selectRaw` are responsible for guarding the embedded text
+    // against injection — never pass user input verbatim.
+    std::vector<Garvan::SelectClause> selects;
+
     string order_by = "1 asc";
 
     bool isMany = false;
@@ -118,6 +142,20 @@ public:
         this->private_columns = private_columns;
     }
 
+    // Opt-in compiled-SQL trace for the non-raw paths. Toggled by
+    // `GARVAN_SQL_DEBUG=1` (any non-empty non-"0" value). Cached once
+    // per process — no per-query getenv() cost. Mirrors the existing
+    // `[Garvan::raw]` line so log grep patterns work uniformly across
+    // raw and compiled paths.
+    static bool sqlDebugEnabled()
+    {
+        static const bool on = []{
+            const char* v = std::getenv("GARVAN_SQL_DEBUG");
+            return v && *v && v[0] != '0';
+        }();
+        return on;
+    }
+
     // централен execution — uses the parameterized PreparedStatement
     // path so values flow through native binding, not SQL string concat.
     [[nodiscard]] json executeQuery()
@@ -128,6 +166,10 @@ public:
             return json::Array();
         }
         PreparedStatement ps = grammar->compileSelect(*this);
+        if (sqlDebugEnabled()) {
+            std::fprintf(stderr, "[Garvan::sql] %s  (params=%zu)\n",
+                         ps.sql.c_str(), ps.params.size());
+        }
         return dbClient->execute(ps);
     }
 
@@ -148,6 +190,10 @@ public:
         else
             ps = grammar->compileDelete(*this);
 
+        if (sqlDebugEnabled()) {
+            std::fprintf(stderr, "[Garvan::sql] %s  (params=%zu)\n",
+                         ps.sql.c_str(), ps.params.size());
+        }
         return dbClient->execute(ps);
     }
 
@@ -490,6 +536,71 @@ public:
         return result;
     }
 
+    // ---------------------------------------------------------------
+    // COUNT(*) aggregate terminal. Flips `countMode` so the grammar
+    // emits `SELECT COUNT(*) AS n FROM ... [WHERE ...]`, executes,
+    // and parses the resulting envelope shape (list-of-object on the
+    // json-wrapping backends; bare object on the plain backends).
+    // State is restored on both success and exception paths so the
+    // Builder instance stays reusable.
+    // ---------------------------------------------------------------
+    [[nodiscard]] int64_t count()
+    {
+        const bool saved_cm    = countMode;
+        const int  saved_limit = limit;
+        countMode = true;
+        limit     = -1;   // no LIMIT on aggregate
+
+        json envelope;
+        try {
+            envelope = executeQuery();
+        } catch (...) {
+            countMode = saved_cm;
+            limit     = saved_limit;
+            throw;
+        }
+        countMode = saved_cm;
+        limit     = saved_limit;
+
+        return parseCountEnvelope(envelope);
+    }
+
+private:
+    // Best-effort extraction of the single-cell COUNT result from the
+    // driver's return envelope. Handles both the list-of-object shape
+    // (Postgres json_agg, MySQL JSON_ARRAYAGG) and the bare object
+    // shape (SingleStore/SQLite/MonetDB). Numeric strings are coerced
+    // to int64_t because several drivers return counts as text.
+    static int64_t parseCountEnvelope(const json& env)
+    {
+        auto pick_n = [](const json& obj) -> int64_t {
+            if (!obj.isObject()) return 0;
+            const auto& v = obj["n"];
+            if (v.isInt())    return static_cast<int64_t>(v.asInt());
+            if (v.isString()) {
+                try { return std::stoll(v.asString()); } catch (...) { return 0; }
+            }
+            return 0;
+        };
+        // Some drivers return the raw string; try to parse it first.
+        json parsed = env;
+        if (env.isString()) {
+            try { parsed = json::parse(env.asString()); } catch (...) { /* keep env */ }
+        }
+        if (parsed.isArray()) {
+            if (parsed.size() == 0) return 0;
+            return pick_n(parsed.asArray()[0]);
+        }
+        if (parsed.isObject()) return pick_n(parsed);
+        if (parsed.isInt())    return static_cast<int64_t>(parsed.asInt());
+        if (parsed.isString()) {
+            try { return std::stoll(parsed.asString()); } catch (...) { return 0; }
+        }
+        return 0;
+    }
+
+public:
+
     // =======================
     // WHERE
     // =======================
@@ -545,6 +656,187 @@ public:
     }
 
     // ----------------------------------------------------------------
+    // OR WHERE overloads — parallel to where(...), each clause is
+    // tagged with connector="OR" so `Grammar::compileWheres` emits
+    //     WHERE <first> [AND|OR] <next> [AND|OR] <next> ...
+    // The FIRST clause's connector is ignored (there's nothing to
+    // connect to), so an orWhere as the first call is functionally
+    // identical to where — but stylistically wrong; callers should
+    // start with where() and continue with orWhere().
+    // ----------------------------------------------------------------
+    Builder *orWhere(std::string_view field, std::string_view value)
+    {
+        wheres.push_back({std::string(field), "=", std::string(value), "OR"});
+        return this;
+    }
+
+    Builder *orWhere(std::string_view field, std::string_view op, std::string_view value)
+    {
+        wheres.push_back({std::string(field), std::string(op),
+                          std::string(value), "OR"});
+        return this;
+    }
+
+    template <typename V>
+        requires (std::integral<V> && !std::same_as<std::remove_cvref_t<V>, bool>)
+              || std::floating_point<V>
+    Builder* orWhere(std::string_view field, std::string_view op, V value)
+    {
+        wheres.push_back({std::string(field), std::string(op),
+                          std::to_string(value), "OR"});
+        return this;
+    }
+
+    Builder* orWhere(std::string_view field, std::string_view op, bool value)
+    {
+        wheres.push_back({std::string(field), std::string(op),
+                          value ? std::string("true") : std::string("false"),
+                          "OR"});
+        return this;
+    }
+
+    Builder* orWhere(std::string_view field, std::string_view op, std::nullptr_t)
+    {
+        wheres.push_back({std::string(field), std::string(op),
+                          std::string("NULL"), "OR"});
+        return this;
+    }
+
+    // ----------------------------------------------------------------
+    // WHERE IN / NOT IN — each value gets its own placeholder, so the
+    // emitted SQL is `col IN ($1, $2, ...)`. Refuses an empty values
+    // list (SQL `IN ()` is a syntax error on every backend). The
+    // `orWhereIn` / `orWhereNotIn` variants tag the clause with
+    // connector "OR" so `Grammar::compileWheres` renders the correct
+    // logical connector between clauses.
+    // ----------------------------------------------------------------
+    Builder* whereIn(std::string_view field, std::vector<std::string> values)
+    {
+        if (values.empty())
+            throw std::runtime_error("Builder::whereIn: empty values list");
+        WhereClause w;
+        w.column    = std::string(field);
+        w.op        = "IN";
+        w.connector = "AND";
+        w.values    = std::move(values);
+        wheres.push_back(std::move(w));
+        return this;
+    }
+
+    Builder* orWhereIn(std::string_view field, std::vector<std::string> values)
+    {
+        if (values.empty())
+            throw std::runtime_error("Builder::orWhereIn: empty values list");
+        WhereClause w;
+        w.column    = std::string(field);
+        w.op        = "IN";
+        w.connector = "OR";
+        w.values    = std::move(values);
+        wheres.push_back(std::move(w));
+        return this;
+    }
+
+    Builder* whereNotIn(std::string_view field, std::vector<std::string> values)
+    {
+        if (values.empty())
+            throw std::runtime_error("Builder::whereNotIn: empty values list");
+        WhereClause w;
+        w.column    = std::string(field);
+        w.op        = "NOT IN";
+        w.connector = "AND";
+        w.values    = std::move(values);
+        wheres.push_back(std::move(w));
+        return this;
+    }
+
+    Builder* orWhereNotIn(std::string_view field, std::vector<std::string> values)
+    {
+        if (values.empty())
+            throw std::runtime_error("Builder::orWhereNotIn: empty values list");
+        WhereClause w;
+        w.column    = std::string(field);
+        w.op        = "NOT IN";
+        w.connector = "OR";
+        w.values    = std::move(values);
+        wheres.push_back(std::move(w));
+        return this;
+    }
+
+    // ----------------------------------------------------------------
+    // ORDER BY — sets the sort clause for the current query. Direction
+    // is limited to asc|desc (case-insensitive input, lowercased on
+    // storage). The column identifier flows through the grammar's
+    // `sanitizeOrderBy` allowlist at SELECT-compile time. Overwrites
+    // any previous orderBy on the same Builder — the field is a single
+    // string, not a stack; multi-column sort would require a future
+    // `thenBy` / `orderByRaw` API.
+    // ----------------------------------------------------------------
+    Builder* orderBy(std::string_view column, std::string_view direction = "asc")
+    {
+        std::string dir(direction);
+        std::transform(dir.begin(), dir.end(), dir.begin(),
+                       [](unsigned char c){ return std::tolower(c); });
+        if (dir != "asc" && dir != "desc") {
+            throw std::runtime_error(
+                "Builder::orderBy: direction must be 'asc' or 'desc'");
+        }
+        order_by = std::string(column) + " " + dir;
+        return this;
+    }
+
+    // ----------------------------------------------------------------
+    // Raw ORDER BY expression — set `order_by` verbatim. The grammar's
+    // `sanitizeOrderBy` allowlist (alnum + `_,. \t`) enforces safety
+    // at compile time; anything outside the whitelist throws. Use for
+    // multi-column sorts (`c1 DESC, c2 ASC`) or backend-specific
+    // extensions (`NULLS LAST`, `NULLS FIRST`) that the composed
+    // orderBy(col,dir) API cannot express. Overwrites any previous
+    // orderBy on the same Builder.
+    // ----------------------------------------------------------------
+    Builder* orderByRaw(std::string_view expr)
+    {
+        order_by = std::string(expr);
+        return this;
+    }
+
+    // ----------------------------------------------------------------
+    // Structured projection builders.
+    //
+    // - `select("games.id")` — push a wrapped identifier. Grammar
+    //   emits `"games"."id"`.
+    // - `selectAs("w.username", "white_name")` — wrapped identifier
+    //   with an SQL `AS "white_name"` alias. Both column and alias
+    //   flow through the grammar's identifier safety checks.
+    // - `selectRaw("COALESCE(NULLIF(t.name_bul,''),t.name_eng)",
+    //              "chess_name")` — verbatim SQL expression, optional
+    //   `AS "<alias>"`. **DANGEROUS**: callers MUST guard the
+    //   expression against injection (allowlist / no user input).
+    //   The alias — when non-empty — is a plain identifier and gets
+    //   wrapped by the grammar.
+    //
+    // When `selects` is non-empty, it wins over `public_columns` and
+    // `withPrivate()` in the projection compilation pipeline.
+    // ----------------------------------------------------------------
+    Builder* select(std::string_view col)
+    {
+        selects.push_back({Garvan::SelectKind::Column,
+                           std::string(col), ""});
+        return this;
+    }
+    Builder* selectAs(std::string_view col, std::string_view alias)
+    {
+        selects.push_back({Garvan::SelectKind::Aliased,
+                           std::string(col), std::string(alias)});
+        return this;
+    }
+    Builder* selectRaw(std::string_view expr, std::string_view alias = "")
+    {
+        selects.push_back({Garvan::SelectKind::Raw,
+                           std::string(expr), std::string(alias)});
+        return this;
+    }
+
+    // ----------------------------------------------------------------
     // Value-chain overloads (C++23 deducing `this`).
     //
     // Позволяват chain върху value/references, без задължителния
@@ -596,7 +888,8 @@ public:
                   std::string_view right)
     {
         joins.push_back({JoinClause::Type::Inner,
-                         std::string(table), std::string(left),
+                         std::string(table), "",
+                         std::string(left),
                          std::string(op),    std::string(right)});
         return this;
     }
@@ -623,7 +916,8 @@ public:
                       std::string_view right)
     {
         joins.push_back({JoinClause::Type::Left,
-                         std::string(table), std::string(left),
+                         std::string(table), "",
+                         std::string(left),
                          std::string(op),    std::string(right)});
         return this;
     }
@@ -641,7 +935,8 @@ public:
                        std::string_view right)
     {
         joins.push_back({JoinClause::Type::Right,
-                         std::string(table), std::string(left),
+                         std::string(table), "",
+                         std::string(left),
                          std::string(op),    std::string(right)});
         return this;
     }
@@ -656,7 +951,54 @@ public:
     Builder* crossJoin(std::string_view table)
     {
         joins.push_back({JoinClause::Type::Cross,
-                         std::string(table), "", "=", ""});
+                         std::string(table), "",
+                         "", "=", ""});
+        return this;
+    }
+
+    // ================================================================
+    // Aliased JOIN variants — emit `<TYPE> JOIN "<table>" AS "<alias>"
+    // ON ...`. Required for the double-join-same-table pattern
+    // (e.g. `users` joined twice as `w` and `b` from a games row).
+    // The `alias` identifier flows through the grammar's `wrap` call
+    // (identifier safety check + backend-specific quoting) at compile
+    // time. Column references in ON / WHERE / SELECT that begin with
+    // `<alias>.` are handled by `wrapQualified` as usual.
+    // ================================================================
+    Builder* joinAs(std::string_view table, std::string_view alias,
+                    std::string_view left, std::string_view op,
+                    std::string_view right)
+    {
+        joins.push_back({JoinClause::Type::Inner,
+                         std::string(table), std::string(alias),
+                         std::string(left),
+                         std::string(op),    std::string(right)});
+        return this;
+    }
+    Builder* innerJoinAs(std::string_view table, std::string_view alias,
+                         std::string_view left, std::string_view op,
+                         std::string_view right)
+    {
+        return joinAs(table, alias, left, op, right);
+    }
+    Builder* leftJoinAs(std::string_view table, std::string_view alias,
+                        std::string_view left, std::string_view op,
+                        std::string_view right)
+    {
+        joins.push_back({JoinClause::Type::Left,
+                         std::string(table), std::string(alias),
+                         std::string(left),
+                         std::string(op),    std::string(right)});
+        return this;
+    }
+    Builder* rightJoinAs(std::string_view table, std::string_view alias,
+                         std::string_view left, std::string_view op,
+                         std::string_view right)
+    {
+        joins.push_back({JoinClause::Type::Right,
+                         std::string(table), std::string(alias),
+                         std::string(left),
+                         std::string(op),    std::string(right)});
         return this;
     }
 
@@ -713,6 +1055,24 @@ public:
     [[nodiscard]] int getLimit() const { return limit; }
     [[nodiscard]] int getOffset() const { return offset; }
     [[nodiscard]] const vector<string> &getColumns() const { return public_columns; }
+    [[nodiscard]] const vector<string> &getPrivateColumns() const { return private_columns; }
+    [[nodiscard]] bool withPrivateEnabled() const { return includePrivateCols; }
+    [[nodiscard]] bool isCountMode() const { return countMode; }
+    [[nodiscard]] const std::vector<Garvan::SelectClause>& getSelects() const {
+        return selects;
+    }
+
+    // Opt-in to a "SELECT <table>.*" projection instead of the
+    // filtered `public_columns` list. Used when a caller needs
+    // columns that were intentionally hidden from serialization
+    // (password_hash, oauth_sub, etc). Callers must guard the
+    // downstream result — the JSON envelope will contain the
+    // sensitive columns verbatim.
+    Builder* withPrivate()
+    {
+        includePrivateCols = true;
+        return this;
+    }
 
     // =======================
     // RESET
@@ -722,8 +1082,11 @@ public:
     {
         wheres.clear();
         joins.clear();
+        selects.clear();
         limit = 10;
         offset = 0;
+        includePrivateCols = false;
+        countMode = false;
     }
 
     // ================================================================

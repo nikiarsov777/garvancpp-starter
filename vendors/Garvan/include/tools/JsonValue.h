@@ -48,6 +48,30 @@ public:
     bool isArray() const { return std::holds_alternative<Array>(value); }
     bool isObject() const { return std::holds_alternative<Object>(value); }
 
+    // Key lookup on Object payloads. Returns false for any non-Object
+    // value (including null and array) — consistent with the
+    // permissive shape guards used throughout the codebase.
+    bool contains(const std::string& key) const {
+        if (!isObject()) return false;
+        return std::get<Object>(value).find(key) != std::get<Object>(value).end();
+    }
+
+    // Truthy check for `if (json)` / `if (!json)` in callers that
+    // want the Laravel-style "hydrated?" test. Null and structurally
+    // empty (empty string / array / object) values are false; every
+    // scalar or non-empty container is true. Explicit to avoid
+    // silent coercion in unrelated contexts (e.g. arithmetic).
+    explicit operator bool() const {
+        if (isNull()) return false;
+        if (std::holds_alternative<Object>(value))
+            return !std::get<Object>(value).empty();
+        if (std::holds_alternative<Array>(value))
+            return !std::get<Array>(value).empty();
+        if (std::holds_alternative<std::string>(value))
+            return !std::get<std::string>(value).empty();
+        return true;
+    }
+
     JsonValue& operator=(const RawJson& r) {
         value = r;
         return *this;
@@ -175,6 +199,34 @@ public:
             return static_cast<int>(std::get<double>(value));
 
         throw std::runtime_error("JsonValue is not a number");
+    }
+
+    // -----------------------------------------------------------------
+    // Short-name accessors — mirror the `crow::json::rvalue` idiom
+    // (`.i()` for integer, `.s()` for string) so ORM callers can write
+    // `user["id"].i()` / `user["email"].s()` without having to know
+    // which JSON layer they are on. Numeric string coercion mirrors the
+    // permissive read pattern used elsewhere (BaseModel::attrInt).
+    // -----------------------------------------------------------------
+    int64_t i() const {
+        if (std::holds_alternative<int64_t>(value))
+            return std::get<int64_t>(value);
+        if (std::holds_alternative<double>(value))
+            return static_cast<int64_t>(std::get<double>(value));
+        if (std::holds_alternative<bool>(value))
+            return std::get<bool>(value) ? 1 : 0;
+        if (std::holds_alternative<std::string>(value)) {
+            try { return std::stoll(std::get<std::string>(value)); }
+            catch (...) { return 0; }
+        }
+        return 0;
+    }
+
+    const std::string& s() const {
+        static const std::string empty;
+        if (std::holds_alternative<std::string>(value))
+            return std::get<std::string>(value);
+        return empty;
     }
 
     // ----------------------------------------------------------------

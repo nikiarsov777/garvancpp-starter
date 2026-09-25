@@ -27,6 +27,7 @@ public:
     void make(string dbName, string dbHost, string dbPort, string dbUser, string dbPassword, string schema);
     json execute(string query);
     json execute(const PreparedStatement& stmt);
+    int64_t lastInsertId();
     void discon();
 
 private:
